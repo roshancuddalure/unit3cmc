@@ -178,6 +178,15 @@ async function migrate(): Promise<void> {
       created_at timestamp not null default current_timestamp
     );
 
+    create table if not exists logbook_entry_involved_users (
+      id uuid primary key,
+      logbook_entry_id uuid not null references logbook_entries(id) on delete cascade,
+      user_id uuid not null references users(id) on delete cascade,
+      position integer not null default 0,
+      created_at timestamp not null default current_timestamp,
+      unique(logbook_entry_id, user_id)
+    );
+
     create table if not exists weekly_submissions (
       id uuid primary key,
       user_id uuid not null references users(id) on delete cascade,
@@ -583,6 +592,15 @@ async function migrate(): Promise<void> {
       created_at timestamp not null default current_timestamp
     );
 
+    create table if not exists logbook_entry_involved_users (
+      id uuid primary key,
+      logbook_entry_id uuid not null references logbook_entries(id) on delete cascade,
+      user_id uuid not null references users(id) on delete cascade,
+      position integer not null default 0,
+      created_at timestamp not null default current_timestamp,
+      unique(logbook_entry_id, user_id)
+    );
+
     update users
     set
       display_name = coalesce(display_name, name),
@@ -756,6 +774,7 @@ async function migrate(): Promise<void> {
     create index if not exists idx_logbook_entry_analgesia_entry on logbook_entry_analgesia(logbook_entry_id, position);
     create index if not exists idx_logbook_entry_postop_entry on logbook_entry_postoperative_care(logbook_entry_id, position);
     create index if not exists idx_logbook_entry_learning_points_entry on logbook_entry_learning_points(logbook_entry_id, position);
+    create index if not exists idx_logbook_involved_users_user on logbook_entry_involved_users(user_id, created_at desc);
     create index if not exists idx_learning_resources_unit_h5p on learning_resources(unit_id, h5p_content_id);
     create index if not exists idx_academy_programs_unit_status on academy_programs(unit_id, status);
     create index if not exists idx_academy_cohorts_unit_status on academy_cohorts(unit_id, status);

@@ -84,6 +84,7 @@ Current direction:
 - user-specific case numbers
 - fixed Unit 3 anaesthesia unit for now
 - repeatable comorbidities, procedures, analgesia, post-operative care, and learning points
+- zero-to-many structured additional unit members linked to a case
 - mandatory learning point before save
 - personal case browser
 - chief/faculty selected-trainee browser
@@ -147,14 +148,14 @@ Current direction:
 - `unit_admin_or_faculty` remains the unit chief/admin-style role and is renamed in seed/migration display text to `Unit Admin / Chief`
 - `faculty` can add personal logbook cases
 - `faculty` can view a scoped `Cases involving me` logbook browser
-- scoped faculty access includes own cases plus cases where the faculty name/username appears in reflective/event/learning-point text
+- scoped faculty access includes own cases plus cases where the faculty user is explicitly linked on the logbook entry
 - `faculty` must not see admin management, learning management, document authoring/review, unit-wide logbook oversight, or confidential unit analytics by default
 
 Implementation reminders:
 
 - run `npm run db:migrate` or `npm run db:seed` after deployment so the new `faculty` role exists in production
 - assign faculty users to the `Faculty` role from Admin after the role seed is present
-- future work should add explicit involved-faculty tagging if free-text name matching becomes too loose
+- logbook shared visibility now uses structured additional-member links; future work can add relationship types later if supervision/referral categories need analytics
 
 ## Assumptions And Defaults
 - Use `npm` as the package manager.

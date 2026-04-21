@@ -1857,6 +1857,28 @@ ul.clean-list,
   margin-bottom: 0;
 }
 
+.repeatable-empty-state {
+  margin: 0;
+}
+
+.repeatable-member-row {
+  align-items: start;
+}
+
+.repeatable-member-fields {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.repeatable-member-picker input {
+  width: 100%;
+}
+
+.repeatable-member-hint {
+  margin: 0;
+}
+
 .repeatable-remove {
   align-self: end;
 }

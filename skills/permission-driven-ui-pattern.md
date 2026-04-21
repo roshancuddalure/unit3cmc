@@ -31,6 +31,7 @@ When the UI exposes pages or counts that the role should not conceptually own, u
 - Use `logbook:involved-view` for faculty who can see their own cases plus cases where their name is mentioned for referral or feedback.
 - Do not show `Reviews`, unit-wide dashboards, chief comparison boards, or learner-wide analytics to `faculty`.
 - UI copy for scoped faculty views should say `cases involving me`, `scoped access`, or `reference`, never `unit oversight`.
+- When a user's visibility depends on case participation, drive it from a structured relation such as `logbook_entry_involved_users`, not from free-text mentions inside notes.
 
 ## Content rule
 

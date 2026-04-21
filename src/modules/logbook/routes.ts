@@ -78,7 +78,8 @@ export function buildLogbookRouter(logbookService: LogbookService): Router {
         blockCatheterNames: req.body.blockCatheterNames,
         singleShotBlockNames: req.body.singleShotBlockNames,
         postOperativeCare: req.body.postOperativeCare,
-        learningPoints: req.body.learningPoints
+        learningPoints: req.body.learningPoints,
+        additionalMemberIds: req.body.additionalMemberIds
       });
       setFlash(req, "success", "De-identified logbook entry added.");
       res.redirect("/logbook");

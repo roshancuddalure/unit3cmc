@@ -529,6 +529,8 @@ export class LogbookService {
     const personalRange = resolveDateRange(filters.periodStart, filters.periodEnd, 28);
     const personalRecentEntries = await this.logbookRepository.listByUser(user.id, 12);
     const surgeryNameSuggestions = await this.logbookRepository.listSurgeryNameSuggestions(user.unitId);
+    const allUnitMembers = await this.logbookRepository.listUnitMembers(user.unitId);
+    const availableAdditionalMembers = allUnitMembers.filter((member) => member.id !== user.id && member.status === "active");
     const personalSummary = enrichSummary(
       await this.logbookRepository.getPeriodSummary(user.id, personalRange.start, personalRange.end)
     );
@@ -588,7 +590,7 @@ export class LogbookService {
     } | null = null;
 
     if (canReview) {
-      teamMembers = await this.logbookRepository.listUnitMembers(user.unitId);
+      teamMembers = allUnitMembers;
       teamRange = resolveDateRange(filters.memberPeriodStart, filters.memberPeriodEnd, 7);
       teamView = filters.teamView === "overview" ? "overview" : "individual";
       teamBrowseFilters = buildBrowseFilters(
@@ -725,6 +727,7 @@ export class LogbookService {
           : ""
       },
       surgeryNameSuggestions,
+      availableAdditionalMembers,
       entryOptions: {
         fixedAnaesthesiaUnit: FIXED_ANAESTHESIA_UNIT,
         caseTypes: CASE_TYPE_OPTIONS,
@@ -859,6 +862,7 @@ export class LogbookService {
       singleShotBlockNames?: string | string[];
       postOperativeCare?: string | string[];
       learningPoints?: string | string[];
+      additionalMemberIds?: string | string[];
     }
   ): Promise<void> {
     const activityDate = parseIsoDate(input.activityDate, "Activity date");
@@ -892,6 +896,13 @@ export class LogbookService {
     const learningPoints = asStringArray(input.learningPoints)
       .map((item) => item.trim())
       .filter(Boolean);
+    const requestedAdditionalMemberIds = Array.from(
+      new Set(
+        asStringArray(input.additionalMemberIds)
+          .map((item) => item.trim())
+          .filter(Boolean)
+      )
+    );
 
     if (!procedureName) {
       throw new HttpError(400, "Surgery name is required.");
@@ -973,6 +984,14 @@ export class LogbookService {
     const complexityLevel = deriveComplexityLevel(caseType, surgicalDepartment, asaPhysicalStatus, postOperativeCare);
     const hadComplication = Boolean(intraoperativeEvents);
     const reflectionNotes = learningPoints.join("\n");
+    const availableAdditionalMembers = (await this.logbookRepository.listUnitMembers(user.unitId))
+      .filter((member) => member.id !== user.id && member.status === "active");
+    const validAdditionalMemberIds = new Set(availableAdditionalMembers.map((member) => member.id));
+    const invalidAdditionalMemberIds = requestedAdditionalMemberIds.filter((id) => !validAdditionalMemberIds.has(id));
+
+    if (invalidAdditionalMemberIds.length) {
+      throw new HttpError(400, "Choose valid additional unit members from the registered active users.");
+    }
 
     const entryId = await this.logbookRepository.create({
       userId: user.id,
@@ -1011,7 +1030,8 @@ export class LogbookService {
       procedures,
       analgesiaItems,
       postOperativeCare,
-      learningPoints
+      learningPoints,
+      additionalMemberIds: requestedAdditionalMemberIds
     });
 
     await this.auditRepository.record({
@@ -1025,7 +1045,8 @@ export class LogbookService {
         caseType,
         surgicalDepartment,
         anaestheticPlanned,
-        hadComplication
+        hadComplication,
+        additionalMemberCount: requestedAdditionalMemberIds.length
       }
     });
   }

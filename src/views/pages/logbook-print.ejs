@@ -7,6 +7,12 @@
       .join(" ");
   const showText = (value) => String(value ?? "").trim() || "-";
   const joinItems = (items) => (Array.isArray(items) && items.length ? items.join(", ") : "-");
+  const formatAdditionalMembers = (members) =>
+    Array.isArray(members) && members.length
+      ? members
+          .map((member) => `${member.displayName}${member.designation ? ` (${member.designation})` : ""}`)
+          .join(", ")
+      : "-";
   const caseLabel = (entry) => (entry.caseNumber ? `Case ${entry.caseNumber}` : "Case pending");
   const reportId = `U3-LB-${summary.periodStart.replace(/-/g, "")}-${summary.periodEnd.replace(/-/g, "")}-${summary.userId.slice(0, 8).toUpperCase()}`;
   const generatedDate = generatedAt.slice(0, 16).replace("T", " ");
@@ -272,6 +278,9 @@
                     <td>
                       <strong><%= caseLabel(entry) %></strong><br />
                       <strong><%= entry.procedureName %></strong>
+                      <% if (entry.additionalMembers.length) { %>
+                        <br /><span>Shared with: <%= formatAdditionalMembers(entry.additionalMembers) %></span>
+                      <% } %>
                       <% if (entry.hadComplication) { %>
                         <span class="logbook-print-flag">Flagged event</span>
                       <% } %>

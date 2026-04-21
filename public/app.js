@@ -289,8 +289,11 @@ SAFETY ALERTS:
     const browserQueryKeys = ["entrySearch", "entryCaseType", "entryDepartment", "entryFlagged"];
     const oversightQueryKeys = ["teamEntrySearch", "teamEntryCaseType", "teamEntryDepartment", "teamEntryFlagged", "teamView"];
     const requestedBrowserTab = browserQueryKeys.some((key) => queryParams.has(key)) ? "entries" : "";
-    const requestedOversightTab = oversightQueryKeys.some((key) => queryParams.has(key)) ? "oversight" : "";
-    activateLogbookTab(requestedOversightTab || requestedBrowserTab || storedTab);
+    const requestedTeamView = queryParams.get("teamView");
+    const requestedOversightTab =
+      oversightQueryKeys.some((key) => queryParams.has(key)) && requestedTeamView !== "involved" ? "oversight" : "";
+    const requestedInvolvedTab = requestedTeamView === "involved" ? "involved" : "";
+    activateLogbookTab(requestedInvolvedTab || requestedOversightTab || requestedBrowserTab || storedTab);
   }
 
   // ── Logbook fieldset accordion (mobile only, <= 780px) ─────────
@@ -389,6 +392,11 @@ SAFETY ALERTS:
     const otherComorbidityInput = otherComorbidityRow?.querySelector("input");
     const repeatableLists = Array.from(logbookBlueprintForm.querySelectorAll("[data-repeatable-list]"));
     const repeatableAddButtons = Array.from(logbookBlueprintForm.querySelectorAll("[data-repeatable-add]"));
+    const additionalMemberRoot = logbookBlueprintForm.querySelector("[data-additional-member-root]");
+    const additionalMemberList = logbookBlueprintForm.querySelector("[data-additional-member-list]");
+    const additionalMemberEmpty = logbookBlueprintForm.querySelector("[data-additional-member-empty]");
+    const additionalMemberAddButton = logbookBlueprintForm.querySelector("[data-additional-member-add]");
+    const additionalMemberSuggestions = Array.from(document.querySelectorAll("#unit-member-suggestions option"));
 
     const calculateDurationLabel = () => {
       if (!(startTimeInput instanceof HTMLInputElement) || !(endTimeInput instanceof HTMLInputElement) || !durationLabel) {
@@ -553,11 +561,156 @@ SAFETY ALERTS:
       });
     });
 
+    const memberLabelToId = new Map(
+      additionalMemberSuggestions
+        .map((option) => [option.value.trim(), option.getAttribute("data-member-id") || ""])
+        .filter(([, memberId]) => memberId)
+    );
+
+    const syncAdditionalMemberEmptyState = () => {
+      if (!additionalMemberList || !additionalMemberEmpty) {
+        return;
+      }
+
+      const hasRows = Boolean(additionalMemberList.querySelector(".repeatable-member-row"));
+      additionalMemberEmpty.hidden = hasRows;
+      additionalMemberRoot?.classList.toggle("has-members", hasRows);
+    };
+
+    const syncAdditionalMemberRow = (row) => {
+      const label = row.querySelector("[data-additional-member-label]");
+      const displayInput = row.querySelector("[data-additional-member-display]");
+      const hiddenInput = row.querySelector("[data-additional-member-id]");
+      const hint = row.querySelector("[data-additional-member-hint]");
+      const rows = additionalMemberList ? Array.from(additionalMemberList.querySelectorAll(".repeatable-member-row")) : [];
+      const index = rows.indexOf(row);
+
+      if (label) {
+        label.textContent = `Additional member ${index + 1}`;
+      }
+
+      if (!(displayInput instanceof HTMLInputElement) || !(hiddenInput instanceof HTMLInputElement)) {
+        return;
+      }
+
+      const selectedLabel = displayInput.value.trim();
+      const selectedId = memberLabelToId.get(selectedLabel) || "";
+      hiddenInput.name = "additionalMemberIds";
+      hiddenInput.value = selectedId;
+
+      if (selectedLabel && !selectedId) {
+        displayInput.setCustomValidity("Choose a registered unit member from the suggestions.");
+      } else {
+        displayInput.setCustomValidity("");
+      }
+
+      if (hint) {
+        hint.textContent = selectedId
+          ? "This member will be able to open the case after it is saved."
+          : "Start typing a name, designation, or @username and choose a suggestion.";
+      }
+    };
+
+    const buildAdditionalMemberRow = () => {
+      if (!(additionalMemberList instanceof HTMLElement)) {
+        return;
+      }
+
+      const row = document.createElement("div");
+      row.className = "repeatable-row repeatable-member-row";
+
+      const fields = document.createElement("div");
+      fields.className = "repeatable-member-fields";
+
+      const label = document.createElement("label");
+      label.className = "repeatable-member-picker";
+      const labelSpan = document.createElement("span");
+      labelSpan.setAttribute("data-additional-member-label", "");
+
+      const displayInput = document.createElement("input");
+      displayInput.type = "text";
+      displayInput.setAttribute("list", "unit-member-suggestions");
+      displayInput.setAttribute("placeholder", "Start typing a name, designation, or @username");
+      displayInput.setAttribute("autocomplete", "off");
+      displayInput.setAttribute("data-additional-member-display", "");
+
+      const hiddenInput = document.createElement("input");
+      hiddenInput.type = "hidden";
+      hiddenInput.setAttribute("data-additional-member-id", "");
+
+      const hint = document.createElement("p");
+      hint.className = "meta-text repeatable-member-hint";
+      hint.setAttribute("data-additional-member-hint", "");
+
+      label.appendChild(labelSpan);
+      label.appendChild(displayInput);
+      fields.appendChild(label);
+      fields.appendChild(hiddenInput);
+      fields.appendChild(hint);
+
+      const removeButton = document.createElement("button");
+      removeButton.type = "button";
+      removeButton.className = "button-link button-link-secondary repeatable-remove";
+      removeButton.setAttribute("data-additional-member-remove", "");
+      removeButton.textContent = "Remove";
+
+      row.appendChild(fields);
+      row.appendChild(removeButton);
+      additionalMemberList.appendChild(row);
+
+      displayInput.addEventListener("input", () => syncAdditionalMemberRow(row));
+      displayInput.addEventListener("change", () => syncAdditionalMemberRow(row));
+      displayInput.addEventListener("blur", () => syncAdditionalMemberRow(row));
+
+      syncAdditionalMemberRow(row);
+      syncAdditionalMemberEmptyState();
+      displayInput.focus();
+    };
+
+    if (additionalMemberAddButton instanceof HTMLButtonElement) {
+      additionalMemberAddButton.addEventListener("click", buildAdditionalMemberRow);
+    }
+
+    if (additionalMemberList instanceof HTMLElement) {
+      additionalMemberList.addEventListener("click", (event) => {
+        if (!(event.target instanceof Element)) {
+          return;
+        }
+
+        const removeButton = event.target.closest("[data-additional-member-remove]");
+        if (!(removeButton instanceof HTMLButtonElement)) {
+          return;
+        }
+
+        const row = removeButton.closest(".repeatable-member-row");
+        if (!row) {
+          return;
+        }
+
+        row.remove();
+        Array.from(additionalMemberList.querySelectorAll(".repeatable-member-row")).forEach((memberRow) => {
+          syncAdditionalMemberRow(memberRow);
+        });
+        syncAdditionalMemberEmptyState();
+      });
+    }
+
+    syncAdditionalMemberEmptyState();
+
     startTimeInput?.addEventListener("input", calculateDurationLabel);
     endTimeInput?.addEventListener("input", calculateDurationLabel);
     anaestheticPlanSelect?.addEventListener("change", syncAnaesthesiaVisibility);
     airwaySelect?.addEventListener("change", syncAnaesthesiaVisibility);
     otherComorbidityToggle?.addEventListener("change", syncOtherComorbidityVisibility);
+    logbookBlueprintForm.addEventListener("submit", () => {
+      if (!(additionalMemberList instanceof HTMLElement)) {
+        return;
+      }
+
+      Array.from(additionalMemberList.querySelectorAll(".repeatable-member-row")).forEach((row) => {
+        syncAdditionalMemberRow(row);
+      });
+    });
 
     calculateDurationLabel();
     syncAnaesthesiaVisibility();
@@ -598,6 +751,7 @@ SAFETY ALERTS:
       setModalText("[data-case-modal-supervision]", data.caseSupervision);
       setModalText("[data-case-modal-airway]", data.caseAirway);
       setModalText("[data-case-modal-scopy]", data.caseScopy);
+      setModalText("[data-case-modal-members]", data.caseMembers);
       setModalText("[data-case-modal-postop]", data.casePostop);
       setModalText("[data-case-modal-comorbidities]", data.caseComorbidities);
       setModalText("[data-case-modal-procedures]", data.caseProcedures);

@@ -8,6 +8,14 @@
   const showText = (value) => String(value ?? "").trim() || "-";
   const joinItems = (items) => (Array.isArray(items) && items.length ? items.join(", ") : "-");
   const caseLabel = (entry) => (entry.caseNumber ? `Case ${entry.caseNumber}` : "Case pending");
+  const memberOptionLabel = (member) =>
+    `${member.displayName}${member.designation ? ` | ${member.designation}` : ""} | @${member.username}`;
+  const formatAdditionalMembers = (members) =>
+    Array.isArray(members) && members.length
+      ? members
+          .map((member) => `${member.displayName}${member.designation ? ` (${member.designation})` : ""}`)
+          .join(", ")
+      : "-";
   const formatAsa = (value) => {
     const normalized = String(value || "").trim();
     if (!normalized) {
@@ -112,6 +120,11 @@
       <datalist id="surgery-name-suggestions">
         <% surgeryNameSuggestions.forEach((item) => { %>
           <option value="<%= item %>"></option>
+        <% }) %>
+      </datalist>
+      <datalist id="unit-member-suggestions">
+        <% availableAdditionalMembers.forEach((member) => { %>
+          <option value="<%= memberOptionLabel(member) %>" data-member-id="<%= member.id %>"></option>
         <% }) %>
       </datalist>
 
@@ -264,6 +277,28 @@
                 </label>
               <% }) %>
             </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="form-section-card">
+        <legend>Additional unit members</legend>
+        <div class="fieldset-body">
+          <div class="callout callout-info compact-callout">
+            <p class="section-copy">
+              Add zero or more registered active Unit 3 members who should also be able to open this case log later. The primary uploader remains the case owner.
+            </p>
+          </div>
+
+          <div class="repeatable-shell" data-additional-member-root>
+            <div class="repeatable-shell-head">
+              <p class="section-kicker">Shared access members</p>
+              <button type="button" class="button-link button-link-secondary" data-additional-member-add>Add member</button>
+            </div>
+            <div class="repeatable-list member-repeatable-list" data-additional-member-list></div>
+            <p class="meta-text repeatable-empty-state" data-additional-member-empty>
+              No additional members linked yet. This is optional, so you can leave it empty.
+            </p>
           </div>
         </div>
       </fieldset>
@@ -590,6 +625,7 @@
             data-case-analgesia="<%= joinItems(entry.analgesiaItems) %>"
             data-case-events="<%= entry.hadComplication ? entry.complicationSummary : '-' %>"
             data-case-learning="<%= joinItems(entry.learningPoints) %>"
+            data-case-members="<%= formatAdditionalMembers(entry.additionalMembers) %>"
           >View case</button>
           <a class="button-link button-link-secondary logbook-print-case-button" href="/logbook/print/case/<%= entry.id %>" target="_blank" rel="noreferrer">Print case</a>
           </div>
@@ -623,6 +659,9 @@
           <p class="meta-text">Comorbidities: <%= joinItems(entry.comorbidities) %></p>
           <p class="meta-text">Procedures: <%= joinItems(entry.procedures) %></p>
           <p class="meta-text">Analgesia: <%= joinItems(entry.analgesiaItems) %></p>
+          <% if (entry.additionalMembers.length) { %>
+            <p class="meta-text">Additional members: <%= formatAdditionalMembers(entry.additionalMembers) %></p>
+          <% } %>
           <% if (entry.hadComplication) { %>
             <p class="status-callout status-returned">Intra operative events: <%= entry.complicationSummary %></p>
           <% } %>
@@ -749,11 +788,15 @@
                 data-case-analgesia="<%= joinItems(entry.analgesiaItems) %>"
                 data-case-events="<%= entry.hadComplication ? entry.complicationSummary : '-' %>"
                 data-case-learning="<%= joinItems(entry.learningPoints) %>"
+                data-case-members="<%= formatAdditionalMembers(entry.additionalMembers) %>"
               >View case</button>
               <a class="button-link button-link-secondary logbook-print-case-button" href="/logbook/print/case/<%= entry.id %>" target="_blank" rel="noreferrer">Print case</a>
             </div>
             <p class="meta-text"><%= showText(entry.surgicalDepartment) %> | <%= showText(entry.anaestheticPlanned || pretty(entry.anaesthesiaTechnique)) %> | <%= showText(entry.supervisionLevel) %></p>
             <p class="meta-text">OT <%= showText(entry.otNumber) %> | <%= formatAsa(entry.asaPhysicalStatus) %> | Post op: <%= joinItems(entry.postOperativeCare) %></p>
+            <% if (entry.additionalMembers.length) { %>
+              <p class="meta-text">Additional members: <%= formatAdditionalMembers(entry.additionalMembers) %></p>
+            <% } %>
             <% if (entry.hadComplication) { %>
               <p class="status-callout status-returned">Intra operative events: <%= entry.complicationSummary %></p>
             <% } %>
@@ -990,6 +1033,7 @@
                   data-case-analgesia="<%= joinItems(entry.analgesiaItems) %>"
                   data-case-events="<%= entry.hadComplication ? entry.complicationSummary : '-' %>"
                   data-case-learning="<%= joinItems(entry.learningPoints) %>"
+                  data-case-members="<%= formatAdditionalMembers(entry.additionalMembers) %>"
                 >View case</button>
                 <a class="button-link button-link-secondary logbook-print-case-button" href="/logbook/print/case/<%= entry.id %>" target="_blank" rel="noreferrer">Print case</a>
                 </div>
@@ -1003,6 +1047,9 @@
                   OT: <%= showText(entry.otNumber) %> | Age: <%= showText(entry.ageYears) %> | <%= formatAsa(entry.asaPhysicalStatus) %> | Plan: <%= showText(entry.anaestheticPlanned || pretty(entry.anaesthesiaTechnique)) %>
                 </p>
                 <p class="meta-text">Post op care: <%= joinItems(entry.postOperativeCare) %></p>
+                <% if (entry.additionalMembers.length) { %>
+                  <p class="meta-text">Additional members: <%= formatAdditionalMembers(entry.additionalMembers) %></p>
+                <% } %>
                 <% if (entry.learningPoints.length) { %>
                   <p class="meta-text">Learning: <%= joinItems(entry.learningPoints) %></p>
                 <% } %>
@@ -1171,11 +1218,15 @@
                   data-case-analgesia="<%= joinItems(entry.analgesiaItems) %>"
                   data-case-events="<%= entry.hadComplication ? entry.complicationSummary : '-' %>"
                   data-case-learning="<%= joinItems(entry.learningPoints) %>"
+                  data-case-members="<%= formatAdditionalMembers(entry.additionalMembers) %>"
                 >View case</button>
                 <a class="button-link button-link-secondary logbook-print-case-button" href="/logbook/print/case/<%= entry.id %>" target="_blank" rel="noreferrer">Print case</a>
                 </div>
                 <p class="meta-text"><%= showText(entry.surgicalDepartment) %> | <%= showText(entry.anaestheticPlanned || pretty(entry.anaesthesiaTechnique)) %> | <%= showText(entry.supervisionLevel) %></p>
                 <p class="meta-text">OT <%= showText(entry.otNumber) %> | <%= formatAsa(entry.asaPhysicalStatus) %> | Post op: <%= joinItems(entry.postOperativeCare) %></p>
+                <% if (entry.additionalMembers.length) { %>
+                  <p class="meta-text">Additional members: <%= formatAdditionalMembers(entry.additionalMembers) %></p>
+                <% } %>
                 <% if (entry.hadComplication) { %>
                   <p class="status-callout status-returned">Intra operative events: <%= entry.complicationSummary %></p>
                 <% } %>
@@ -1268,6 +1319,7 @@
       <section class="logbook-case-modal-section">
         <p class="section-kicker">Procedures and outcome</p>
         <div class="logbook-case-modal-notes">
+          <article><span>Additional members</span><p data-case-modal-members>-</p></article>
           <article><span>Comorbidities</span><p data-case-modal-comorbidities>-</p></article>
           <article><span>Procedures</span><p data-case-modal-procedures>-</p></article>
           <article><span>Analgesia</span><p data-case-modal-analgesia>-</p></article>

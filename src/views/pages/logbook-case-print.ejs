@@ -7,6 +7,12 @@
       .join(" ");
   const showText = (value) => String(value ?? "").trim() || "-";
   const joinItems = (items) => (Array.isArray(items) && items.length ? items.join(", ") : "-");
+  const formatAdditionalMembers = (members) =>
+    Array.isArray(members) && members.length
+      ? members
+          .map((member) => `${member.displayName}${member.designation ? ` (${member.designation})` : ""}`)
+          .join(", ")
+      : "-";
   const caseLabel = entry.caseNumber ? `Case ${entry.caseNumber}` : "Case pending";
   const generatedDate = generatedAt.slice(0, 16).replace("T", " ");
   const reportId = `U3-CASE-${entry.activityDate.replace(/-/g, "")}-${entry.id.slice(0, 8).toUpperCase()}`;
@@ -75,7 +81,7 @@
 
         <div class="logbook-print-control-grid">
           <article><span>Unit</span><strong>Unit 3 Anaesthesia</strong></article>
-          <article><span>Mode</span><strong><%= printMode === "team" ? "Faculty / Chief review" : "Personal logbook" %></strong></article>
+          <article><span>Mode</span><strong><%= printMode === "team" ? "Faculty / Chief review" : printMode === "involved" ? "Shared case access" : "Personal logbook" %></strong></article>
           <article><span>Classification</span><strong>Internal de-identified record</strong></article>
         </div>
       </section>
@@ -89,6 +95,7 @@
           <article><span>Case type</span><strong><%= entry.caseType %></strong></article>
           <article><span>Surgical department</span><strong><%= showText(entry.surgicalDepartment) %></strong></article>
           <article><span>OT number</span><strong><%= showText(entry.otNumber) %></strong></article>
+          <article><span>Additional members</span><strong><%= formatAdditionalMembers(entry.additionalMembers) %></strong></article>
           <article><span>Specialty</span><strong><%= pretty(entry.specialtyArea) || "-" %></strong></article>
           <article><span>Urgency</span><strong><%= pretty(entry.urgency) || "-" %></strong></article>
           <article><span>Complexity</span><strong><%= pretty(entry.complexityLevel) || "-" %></strong></article>

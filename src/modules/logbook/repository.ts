@@ -5,6 +5,14 @@ import { getPool } from "../../db/pool";
 import { query } from "../../db/query";
 import type { AuthenticatedUser } from "../../shared/types/domain";
 
+export interface LogbookLinkedUserRecord {
+  userId: string;
+  displayName: string;
+  username: string;
+  roleKey: string;
+  designation: string;
+}
+
 export interface LogbookEntryRecord {
   id: string;
   caseNumber: number | null;
@@ -43,6 +51,7 @@ export interface LogbookEntryRecord {
   analgesiaItems: string[];
   postOperativeCare: string[];
   learningPoints: string[];
+  additionalMembers: LogbookLinkedUserRecord[];
   createdAt: string;
 }
 
@@ -50,6 +59,7 @@ export interface UnitMemberOption {
   id: string;
   name: string;
   displayName: string;
+  username: string;
   role: string;
   designation: string;
   status: string;
@@ -159,6 +169,16 @@ interface LearningPointRow {
   position: number;
 }
 
+interface LinkedUserRow {
+  logbook_entry_id: string;
+  user_id: string;
+  display_name: string;
+  username: string;
+  role_key: string;
+  designation: string | null;
+  position: number;
+}
+
 interface UnitBrowseRow extends EntryRow {
   user_id: string;
   user_name: string;
@@ -222,6 +242,24 @@ function groupLearningPoints(rows: LearningPointRow[]): Map<string, string[]> {
   return grouped;
 }
 
+function groupLinkedUsers(rows: LinkedUserRow[]): Map<string, LogbookLinkedUserRecord[]> {
+  const grouped = new Map<string, LogbookLinkedUserRecord[]>();
+
+  for (const row of rows.sort((left, right) => left.position - right.position)) {
+    const items = grouped.get(row.logbook_entry_id) ?? [];
+    items.push({
+      userId: row.user_id,
+      displayName: row.display_name,
+      username: row.username,
+      roleKey: row.role_key,
+      designation: row.designation ?? ""
+    });
+    grouped.set(row.logbook_entry_id, items);
+  }
+
+  return grouped;
+}
+
 function mapEntry(row: EntryRow): LogbookEntryRecord {
   return {
     id: row.id,
@@ -261,6 +299,7 @@ function mapEntry(row: EntryRow): LogbookEntryRecord {
     analgesiaItems: [],
     postOperativeCare: [],
     learningPoints: [],
+    additionalMembers: [],
     createdAt: row.created_at
   };
 }
@@ -438,6 +477,13 @@ export class LogbookRepository {
             or supervision_level ilike '%' || $7 || '%'
             or complication_summary ilike '%' || $7 || '%'
             or case_number::text ilike '%' || $7 || '%'
+            or exists (
+              select 1
+              from logbook_entry_involved_users liu
+              inner join users iu on iu.id = liu.user_id
+              where liu.logbook_entry_id = logbook_entries.id
+                and coalesce(iu.display_name, iu.name) ilike '%' || $7 || '%'
+            )
           )
         order by activity_date desc, created_at desc
         limit $8
@@ -517,6 +563,13 @@ export class LogbookRepository {
             or le.complication_summary ilike '%' || $7 || '%'
             or le.case_number::text ilike '%' || $7 || '%'
             or coalesce(u.display_name, u.name) ilike '%' || $7 || '%'
+            or exists (
+              select 1
+              from logbook_entry_involved_users liu
+              inner join users iu on iu.id = liu.user_id
+              where liu.logbook_entry_id = le.id
+                and coalesce(iu.display_name, iu.name) ilike '%' || $7 || '%'
+            )
           )
         order by le.activity_date desc, le.created_at desc
         limit $8
@@ -537,7 +590,6 @@ export class LogbookRepository {
   }
 
   async browseInvolvingUser(user: AuthenticatedUser, filters: LogbookBrowseFilters): Promise<UnitBrowseEntryRecord[]> {
-    const involvementPatterns = this.buildInvolvementPatterns(user);
     const result = await query<UnitBrowseRow>(
       this.env,
       `
@@ -589,29 +641,33 @@ export class LogbookRepository {
           and ($6::boolean = false or le.had_complication is true)
           and (
             le.user_id = $7
-            or coalesce(le.intraoperative_events, '') ilike any($8::text[])
-            or coalesce(le.complication_summary, '') ilike any($8::text[])
-            or coalesce(le.reflection_notes, '') ilike any($8::text[])
             or exists (
               select 1
-              from logbook_entry_learning_points lep
-              where lep.logbook_entry_id = le.id
-                and lep.point_text ilike any($8::text[])
+              from logbook_entry_involved_users liu
+              where liu.logbook_entry_id = le.id
+                and liu.user_id = $7
             )
           )
           and (
-            $9 = ''
-            or le.procedure_name ilike '%' || $9 || '%'
-            or le.surgical_department ilike '%' || $9 || '%'
-            or le.ot_number ilike '%' || $9 || '%'
-            or le.anaesthetic_planned ilike '%' || $9 || '%'
-            or le.supervision_level ilike '%' || $9 || '%'
-            or le.complication_summary ilike '%' || $9 || '%'
-            or le.case_number::text ilike '%' || $9 || '%'
-            or coalesce(u.display_name, u.name) ilike '%' || $9 || '%'
+            $8 = ''
+            or le.procedure_name ilike '%' || $8 || '%'
+            or le.surgical_department ilike '%' || $8 || '%'
+            or le.ot_number ilike '%' || $8 || '%'
+            or le.anaesthetic_planned ilike '%' || $8 || '%'
+            or le.supervision_level ilike '%' || $8 || '%'
+            or le.complication_summary ilike '%' || $8 || '%'
+            or le.case_number::text ilike '%' || $8 || '%'
+            or coalesce(u.display_name, u.name) ilike '%' || $8 || '%'
+            or exists (
+              select 1
+              from logbook_entry_involved_users liu
+              inner join users iu on iu.id = liu.user_id
+              where liu.logbook_entry_id = le.id
+                and coalesce(iu.display_name, iu.name) ilike '%' || $8 || '%'
+            )
           )
         order by le.activity_date desc, le.created_at desc
-        limit $10
+        limit $9
       `,
       [
         user.unitId,
@@ -621,7 +677,6 @@ export class LogbookRepository {
         filters.surgicalDepartment,
         filters.flaggedOnly,
         user.id,
-        involvementPatterns,
         filters.searchText,
         filters.limit ?? 80
       ]
@@ -631,7 +686,6 @@ export class LogbookRepository {
   }
 
   async isEntryInvolvingUser(user: AuthenticatedUser, entryId: string): Promise<boolean> {
-    const involvementPatterns = this.buildInvolvementPatterns(user);
     const result = await query<{ exists: boolean }>(
       this.env,
       `
@@ -642,19 +696,16 @@ export class LogbookRepository {
             and le.id = $2
             and (
               le.user_id = $3
-              or coalesce(le.intraoperative_events, '') ilike any($4::text[])
-              or coalesce(le.complication_summary, '') ilike any($4::text[])
-              or coalesce(le.reflection_notes, '') ilike any($4::text[])
               or exists (
                 select 1
-                from logbook_entry_learning_points lep
-                where lep.logbook_entry_id = le.id
-                  and lep.point_text ilike any($4::text[])
+                from logbook_entry_involved_users liu
+                where liu.logbook_entry_id = le.id
+                  and liu.user_id = $3
               )
             )
         ) as exists
       `,
-      [user.unitId, entryId, user.id, involvementPatterns]
+      [user.unitId, entryId, user.id]
     );
 
     return result.rows[0]?.exists ?? false;
@@ -737,6 +788,7 @@ export class LogbookRepository {
       id: string;
       name: string;
       display_name: string | null;
+      username: string;
       role_key: string;
       designation: string | null;
       status: string;
@@ -747,6 +799,7 @@ export class LogbookRepository {
           u.id,
           u.name,
           u.display_name,
+          u.username,
           r.key as role_key,
           u.designation,
           u.status
@@ -763,6 +816,7 @@ export class LogbookRepository {
       id: row.id,
       name: row.name,
       displayName: row.display_name ?? row.name,
+      username: row.username,
       role: row.role_key,
       designation: row.designation ?? "",
       status: row.status
@@ -777,7 +831,7 @@ export class LogbookRepository {
       return entries;
     }
 
-    const [comorbidityResult, procedureResult, analgesiaResult, careResult, learningPointResult] = await Promise.all([
+    const [comorbidityResult, procedureResult, analgesiaResult, careResult, learningPointResult, linkedUserResult] = await Promise.all([
       query<ChildRow>(
         this.env,
         `
@@ -827,6 +881,25 @@ export class LogbookRepository {
           order by position asc, created_at asc
         `,
         [entryIds]
+      ),
+      query<LinkedUserRow>(
+        this.env,
+        `
+          select
+            liu.logbook_entry_id,
+            liu.user_id,
+            coalesce(u.display_name, u.name) as display_name,
+            u.username,
+            r.key as role_key,
+            u.designation,
+            liu.position
+          from logbook_entry_involved_users liu
+          inner join users u on u.id = liu.user_id
+          inner join roles r on r.id = u.role_id
+          where liu.logbook_entry_id = any($1::uuid[])
+          order by liu.position asc, liu.created_at asc
+        `,
+        [entryIds]
       )
     ]);
 
@@ -835,12 +908,14 @@ export class LogbookRepository {
     const analgesiaByEntry = groupChildLabels(analgesiaResult.rows);
     const careByEntry = groupCareLabels(careResult.rows);
     const learningPointsByEntry = groupLearningPoints(learningPointResult.rows);
+    const linkedUsersByEntry = groupLinkedUsers(linkedUserResult.rows);
 
     for (const entry of entries) {
       entry.comorbidities = comorbiditiesByEntry.get(entry.id) ?? [];
       entry.procedures = proceduresByEntry.get(entry.id) ?? [];
       entry.analgesiaItems = analgesiaByEntry.get(entry.id) ?? [];
       entry.postOperativeCare = careByEntry.get(entry.id) ?? [];
+      entry.additionalMembers = linkedUsersByEntry.get(entry.id) ?? [];
       entry.learningPoints =
         learningPointsByEntry.get(entry.id) ??
         entry.reflectionNotes
@@ -876,14 +951,6 @@ export class LogbookRepository {
         designation: metadata?.designation ?? ""
       };
     });
-  }
-
-  private buildInvolvementPatterns(user: AuthenticatedUser): string[] {
-    const identifiers = [user.displayName, user.name, user.username]
-      .map((value) => String(value ?? "").trim())
-      .filter((value) => value.length >= 3);
-
-    return Array.from(new Set(identifiers)).map((value) => `%${value}%`);
   }
 
   private async insertRepeatableChildren(
@@ -930,6 +997,20 @@ export class LogbookRepository {
     }
   }
 
+  private async insertAdditionalMembers(client: PoolClient, entryId: string, userIds: string[]): Promise<void> {
+    for (const [index, userId] of userIds.entries()) {
+      await client.query(
+        `
+          insert into logbook_entry_involved_users (id, logbook_entry_id, user_id, position)
+          values ($1, $2, $3, $4)
+          on conflict (logbook_entry_id, user_id)
+          do update set position = excluded.position
+        `,
+        [randomUUID(), entryId, userId, index]
+      );
+    }
+  }
+
   async create(input: {
     userId: string;
     unitId: string;
@@ -968,6 +1049,7 @@ export class LogbookRepository {
     analgesiaItems?: Array<{ label: string; details?: string }>;
     postOperativeCare?: string[];
     learningPoints?: string[];
+    additionalMemberIds?: string[];
   }): Promise<string> {
     const id = randomUUID();
     const client = await getPool(this.env).connect();
@@ -1075,6 +1157,7 @@ export class LogbookRepository {
       await this.insertRepeatableChildren(client, "logbook_entry_analgesia", id, input.analgesiaItems ?? []);
       await this.insertPostOperativeCare(client, id, input.postOperativeCare ?? []);
       await this.insertLearningPoints(client, id, input.learningPoints ?? []);
+      await this.insertAdditionalMembers(client, id, input.additionalMemberIds ?? []);
 
       await client.query("commit");
       return id;

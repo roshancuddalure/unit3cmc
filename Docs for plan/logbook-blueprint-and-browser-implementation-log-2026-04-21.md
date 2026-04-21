@@ -215,7 +215,7 @@ Changes made:
 - added permission `logbook:involved-view`
 - prevented faculty from inheriting `logbook:review`, `admin:manage`, `learning:manage`, and document authoring/review permissions
 - added an `involved` logbook tab titled `Cases involving me`
-- added repository queries that return only the faculty member's own cases or cases where their display name/name/username is mentioned in intraoperative events, complication summaries, reflection notes, or learning points
+- added repository queries that return only the faculty member's own cases or cases where the user is explicitly linked on the entry
 - extended case print authorization so faculty can print only their own or involved cases
 - updated role seeding/migration so production can create the new role
 
@@ -223,3 +223,23 @@ Verification:
 
 - `npm run build`
 - `npm test`
+
+## Structured Additional Members Pass - 2026-04-21
+
+Implemented a proper zero-to-many additional-member workflow on logbook cases.
+
+Changes made:
+
+- added `logbook_entry_involved_users` as a structured join table
+- each case can now be saved with zero, one, or many linked unit members
+- the uploader remains the primary owner; linked members get view access without becoming the owner
+- added a searchable repeatable member picker in the logbook form
+- linked members now appear on browser cards, the case popup, and printable case/report outputs
+- faculty scoped access now relies on structured links instead of note-text name matching
+
+Guardrails:
+
+- only choose from registered active unit members
+- additional members are optional, not required
+- duplicate selections are collapsed safely on save
+- future upgrades can add relationship labels later without changing the ownership model

@@ -51,6 +51,17 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     created_at: { type: "timestamp", notNull: true, default: pgm.func("current_timestamp") }
   });
 
+  pgm.createTable("logbook_entry_involved_users", {
+    id: { type: "uuid", primaryKey: true },
+    logbook_entry_id: { type: "uuid", notNull: true, references: "logbook_entries", onDelete: "cascade" },
+    user_id: { type: "uuid", notNull: true, references: "users", onDelete: "cascade" },
+    position: { type: "integer", notNull: true, default: 0 },
+    created_at: { type: "timestamp", notNull: true, default: pgm.func("current_timestamp") }
+  });
+  pgm.addConstraint("logbook_entry_involved_users", "logbook_entry_involved_users_unique_member", {
+    unique: ["logbook_entry_id", "user_id"]
+  });
+
   pgm.createTable("weekly_submissions", {
     id: { type: "uuid", primaryKey: true },
     user_id: { type: "uuid", notNull: true, references: "users", onDelete: "cascade" },
@@ -143,6 +154,7 @@ export async function down(pgm: MigrationBuilder): Promise<void> {
   pgm.dropTable("documents", { ifExists: true });
   pgm.dropTable("review_decisions", { ifExists: true });
   pgm.dropTable("weekly_submissions", { ifExists: true });
+  pgm.dropTable("logbook_entry_involved_users", { ifExists: true });
   pgm.dropTable("logbook_entries", { ifExists: true });
   pgm.dropTable("audit_events", { ifExists: true });
   pgm.dropTable("users", { ifExists: true });

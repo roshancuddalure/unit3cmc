@@ -4,6 +4,17 @@ import { LogbookService } from "../src/modules/logbook/service";
 
 function createService() {
   const logbookRepository = {
+    listUnitMembers: vi.fn().mockResolvedValue([
+      {
+        id: "faculty-1",
+        name: "Faculty One",
+        displayName: "Faculty One",
+        username: "faculty.one",
+        role: "faculty",
+        designation: "Faculty",
+        status: "active"
+      }
+    ]),
     create: vi.fn().mockResolvedValue("entry-1")
   };
   const auditRepository = {
@@ -52,6 +63,7 @@ function buildValidInput(overrides: Record<string, unknown> = {}) {
     singleShotBlockNames: ["TAP block"],
     postOperativeCare: ["Ward"],
     learningPoints: ["Anticipate blood loss early"],
+    additionalMemberIds: [],
     ...overrides
   };
 }
@@ -94,7 +106,8 @@ describe("LogbookService blueprint capture", () => {
       learningPoints: ["Review airway plan before induction", "Use early arterial line setup"],
       postOperativeCare: ["ICU/HDU (Planned)", "Ward"],
       comorbidities: ["Diabetes", "Others - Specify"],
-      otherComorbidity: "OSA"
+      otherComorbidity: "OSA",
+      additionalMemberIds: ["faculty-1"]
     } as any);
 
     expect(logbookRepository.create).toHaveBeenCalledWith(
@@ -108,7 +121,8 @@ describe("LogbookService blueprint capture", () => {
         durationMinutes: 135,
         reflectionNotes: "Review airway plan before induction\nUse early arterial line setup",
         postOperativeCare: ["ICU/HDU (Planned)", "Ward"],
-        learningPoints: ["Review airway plan before induction", "Use early arterial line setup"]
+        learningPoints: ["Review airway plan before induction", "Use early arterial line setup"],
+        additionalMemberIds: ["faculty-1"]
       })
     );
     expect(logbookRepository.create).toHaveBeenCalledWith(
@@ -125,5 +139,16 @@ describe("LogbookService blueprint capture", () => {
         entityId: "entry-1"
       })
     );
+  });
+
+  it("rejects additional members that are not valid active unit users", async () => {
+    const { service, user } = createService();
+
+    await expect(
+      service.createForUser(user, {
+        ...buildValidInput(),
+        additionalMemberIds: ["missing-user"]
+      } as any)
+    ).rejects.toBeInstanceOf(HttpError);
   });
 });
