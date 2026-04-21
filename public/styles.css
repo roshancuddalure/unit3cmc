@@ -1524,6 +1524,15 @@ ul.clean-list,
   align-items: end;
 }
 
+.auth-register-training-row.is-training-hidden {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.auth-register-training-row.is-training-hidden [data-training-year-field],
+[data-training-year-field][hidden] {
+  display: none !important;
+}
+
 .auth-register-form input,
 .auth-register-form select {
   min-height: 3.05rem;

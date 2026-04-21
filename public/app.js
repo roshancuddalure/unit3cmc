@@ -221,6 +221,7 @@ SAFETY ALERTS:
   }
 
   const designationSelect = document.querySelector("[data-designation-select]");
+  const trainingYearRow = document.querySelector("[data-training-row]");
   const trainingYearField = document.querySelector("[data-training-year-field]");
   const trainingYearSelect = document.querySelector("[data-training-year-select]");
 
@@ -230,6 +231,8 @@ SAFETY ALERTS:
       trainingYearField.hidden = !shouldShowTrainingYear;
       trainingYearSelect.disabled = !shouldShowTrainingYear;
       trainingYearSelect.required = shouldShowTrainingYear;
+      trainingYearRow?.classList.toggle("is-training-hidden", !shouldShowTrainingYear);
+      trainingYearRow?.classList.toggle("is-training-visible", shouldShowTrainingYear);
 
       if (!shouldShowTrainingYear) {
         trainingYearSelect.value = "";
