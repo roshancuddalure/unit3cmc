@@ -53,6 +53,10 @@ export function buildApp(env: AppEnv) {
   const h5pRuntime = createH5PRuntime(env);
   const loginThrottleService = new LoginThrottleService(env);
 
+  if (env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+  }
+
   app.set("view engine", "ejs");
   app.set("views", path.join(process.cwd(), "src", "views"));
 

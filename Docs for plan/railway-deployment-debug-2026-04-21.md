@@ -109,6 +109,55 @@ If the unit chief credential does not work on Railway:
 
 The seed is idempotent. Running it again updates the existing bootstrap admin password and keeps the user active.
 
+## Confirmed next Railway issue: missing database tables
+
+Later deploy log showed the app booting successfully:
+
+```text
+Unit 3 Management System listening on https://unit3cmc-production.up.railway.app
+```
+
+Then login failed with:
+
+```text
+error: relation "users" does not exist
+code: 42P01
+```
+
+Root cause:
+
+- Railway env variables are now reaching the app
+- the web server is running
+- the Railway Postgres database has no schema yet
+- migrations were not run against the Railway database
+
+Fix:
+
+1. run `npm run db:migrate` against Railway
+2. run `npm run db:seed` against Railway
+3. sign in with the bootstrap admin credential
+
+## Confirmed Railway login loop issue
+
+Symptom:
+
+- bootstrap credential is accepted but the browser returns to `/auth/login`
+- no clear invalid-password message appears
+
+Likely root cause:
+
+- production sessions use `cookie.secure = true`
+- Railway terminates HTTPS at the proxy
+- Express must trust the proxy before `express-session` can correctly treat the request as secure
+
+Fix:
+
+- set `app.set("trust proxy", 1)` in production before session middleware is mounted
+
+Validation:
+
+- after redeploy, login should persist the session cookie and redirect to `/dashboard`
+
 ## Useful commands
 
 Local verification:
