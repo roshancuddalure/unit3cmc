@@ -1,0 +1,329 @@
+<%
+  const pretty = (value) =>
+    String(value || "")
+      .split("_")
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  const showText = (value) => String(value ?? "").trim() || "-";
+  const joinItems = (items) => (Array.isArray(items) && items.length ? items.join(", ") : "-");
+  const caseLabel = (entry) => (entry.caseNumber ? `Case ${entry.caseNumber}` : "Case pending");
+  const reportId = `U3-LB-${summary.periodStart.replace(/-/g, "")}-${summary.periodEnd.replace(/-/g, "")}-${summary.userId.slice(0, 8).toUpperCase()}`;
+  const generatedDate = generatedAt.slice(0, 16).replace("T", " ");
+  const totalHours = summary.totalDurationMinutes > 0 ? (summary.totalDurationMinutes / 60).toFixed(1) : "0";
+  const averageMinutes = summary.totalCases > 0 ? Math.round(summary.totalDurationMinutes / summary.totalCases) : 0;
+  const emergencyCount = summary.urgencyMix.find((item) => item.label === "emergency")?.count ?? 0;
+  const complexCount = summary.complexityMix.find((item) => item.label === "complex")?.count ?? 0;
+  const topProcedureCategory = summary.procedureCategoryMix[0];
+  const topSupervision = summary.supervisionMix[0];
+  const topTechnique = summary.techniqueMix[0];
+  const topSpecialty = summary.specialtyMix[0];
+  const formatAsa = (value) => {
+    const normalized = String(value || "").trim();
+    if (!normalized) {
+      return "-";
+    }
+
+    return normalized.startsWith("asa_")
+      ? `ASA ${normalized.slice(4).toUpperCase()}`
+      : normalized;
+  };
+%>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="print-page print-page-logbook">
+    <main class="print-sheet logbook-print-sheet">
+      <section class="print-toolbar no-print">
+        <button type="button" onclick="window.print()">Print</button>
+        <a class="button-link button-link-secondary" href="/logbook">Back to logbook</a>
+      </section>
+
+      <section class="logbook-print-cover print-panel official-report-cover">
+        <div class="logbook-print-document-band">
+          <span>Official training record</span>
+          <strong><%= reportId %></strong>
+        </div>
+        <div class="logbook-print-brand">
+          <span class="logbook-print-brand-mark">
+            <img src="/assets/logo-transparent.png" alt="Christian Medical College crest" />
+          </span>
+          <div>
+            <p class="eyebrow">Christian Medical College, Vellore</p>
+            <h1><%= printMode === "team" ? "Unit 3 Anaesthesia Clinical Review Report" : "Unit 3 Anaesthesia Personal Logbook Summary" %></h1>
+            <p class="section-copy">
+              De-identified perioperative activity report prepared for official academic review, progression discussion, and Unit 3 governance.
+            </p>
+          </div>
+        </div>
+
+        <div class="logbook-print-meta-grid">
+          <article class="logbook-print-meta-card">
+            <span>Report subject</span>
+            <strong><%= summary.userName %></strong>
+          </article>
+          <article class="logbook-print-meta-card">
+            <span>Reporting period</span>
+            <strong><%= summary.periodStart %> to <%= summary.periodEnd %></strong>
+          </article>
+          <article class="logbook-print-meta-card">
+            <span>Generated</span>
+            <strong><%= generatedDate %></strong>
+          </article>
+          <article class="logbook-print-meta-card">
+            <span>Classification</span>
+            <strong>Internal de-identified report</strong>
+          </article>
+        </div>
+
+        <div class="logbook-print-control-grid">
+          <article><span>Unit</span><strong>Unit 3 Anaesthesia</strong></article>
+          <article><span>Mode</span><strong><%= printMode === "team" ? "Faculty / Chief review" : "Personal logbook" %></strong></article>
+          <article><span>Evidence scope</span><strong><%= entries.length %> detailed case<%= entries.length === 1 ? "" : "s" %></strong></article>
+        </div>
+
+        <div class="logbook-print-assurance official-assurance">
+          <div>
+            <strong>Privacy assurance</strong>
+            <p>This report intentionally excludes patient names, hospital numbers, bed numbers, DOB, and direct identifiers.</p>
+          </div>
+          <div>
+            <strong>Academic use</strong>
+            <p>Use for internal review, faculty discussion, progression documentation, and case-mix audit.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="logbook-print-kpi-grid print-panel">
+        <article class="logbook-print-kpi">
+          <span>Total cases</span>
+          <strong><%= summary.totalCases %></strong>
+        </article>
+        <article class="logbook-print-kpi">
+          <span>Direct performance</span>
+          <strong><%= summary.directCareCases %></strong>
+        </article>
+        <article class="logbook-print-kpi">
+          <span>Clinical domains</span>
+          <strong><%= summary.domainCoverage %></strong>
+        </article>
+        <article class="logbook-print-kpi">
+          <span>Flagged events</span>
+          <strong><%= summary.complicationCount %></strong>
+        </article>
+        <article class="logbook-print-kpi">
+          <span>Total clinical time</span>
+          <strong><%= totalHours %>h</strong>
+        </article>
+        <article class="logbook-print-kpi">
+          <span>Average duration</span>
+          <strong><%= averageMinutes %>m</strong>
+        </article>
+        <article class="logbook-print-kpi">
+          <span>Emergency exposure</span>
+          <strong><%= emergencyCount %></strong>
+        </article>
+        <article class="logbook-print-kpi">
+          <span>Complex cases</span>
+          <strong><%= complexCount %></strong>
+        </article>
+      </section>
+
+      <section class="logbook-print-section print-panel">
+        <div class="logbook-print-section-head">
+          <p class="section-kicker">Executive summary</p>
+          <h2>Clinical period interpretation</h2>
+        </div>
+        <p class="logbook-print-body-copy"><%= summary.analysisNarrative %></p>
+        <div class="logbook-print-insight-grid">
+          <article><span>Leading category</span><strong><%= topProcedureCategory ? `${pretty(topProcedureCategory.label)} (${topProcedureCategory.count})` : "-" %></strong></article>
+          <article><span>Leading supervision</span><strong><%= topSupervision ? `${pretty(topSupervision.label)} (${topSupervision.count})` : "-" %></strong></article>
+          <article><span>Leading technique</span><strong><%= topTechnique ? `${pretty(topTechnique.label)} (${topTechnique.count})` : "-" %></strong></article>
+          <article><span>Leading specialty</span><strong><%= topSpecialty ? `${pretty(topSpecialty.label)} (${topSpecialty.count})` : "-" %></strong></article>
+        </div>
+      </section>
+
+      <section class="logbook-print-split print-panel">
+        <article class="logbook-print-card">
+          <p class="section-kicker">Progression profile</p>
+          <h3><%= pretty(summary.progression.stage) %> progression</h3>
+          <dl class="logbook-print-definition-list">
+            <div><dt>Direct care ratio</dt><dd><%= summary.progression.directCareRatio %>%</dd></div>
+            <div><dt>Emergency exposure</dt><dd><%= summary.progression.emergencyCases %></dd></div>
+            <div><dt>Complex cases</dt><dd><%= summary.progression.complexCases %></dd></div>
+            <div><dt>Independent with review</dt><dd><%= summary.progression.independentCases %></dd></div>
+          </dl>
+        </article>
+        <article class="logbook-print-card">
+          <p class="section-kicker">Strengths</p>
+          <% if (!summary.progression.strengths.length) { %>
+            <p class="logbook-print-note">No clear strengths inferred in this period.</p>
+          <% } %>
+          <ul class="logbook-print-list">
+            <% summary.progression.strengths.forEach((item) => { %>
+              <li><%= item %></li>
+            <% }) %>
+          </ul>
+        </article>
+        <article class="logbook-print-card">
+          <p class="section-kicker">Watch points</p>
+          <% if (!summary.progression.watchPoints.length) { %>
+            <p class="logbook-print-note">No major watch points surfaced in this period.</p>
+          <% } %>
+          <ul class="logbook-print-list logbook-print-list-warning">
+            <% summary.progression.watchPoints.forEach((item) => { %>
+              <li><%= item %></li>
+            <% }) %>
+          </ul>
+        </article>
+      </section>
+
+      <section class="logbook-print-split print-panel">
+        <article class="logbook-print-card">
+          <div class="logbook-print-section-head compact">
+            <p class="section-kicker">Exposure mix</p>
+            <h3>Procedure category</h3>
+          </div>
+          <% summary.procedureCategoryMix.forEach((item) => { %>
+            <div class="metric-row"><span><%= pretty(item.label) %></span><strong><%= item.count %></strong></div>
+          <% }) %>
+        </article>
+        <article class="logbook-print-card">
+          <div class="logbook-print-section-head compact">
+            <p class="section-kicker">Exposure mix</p>
+            <h3>Supervision</h3>
+          </div>
+          <% summary.supervisionMix.forEach((item) => { %>
+            <div class="metric-row"><span><%= pretty(item.label) %></span><strong><%= item.count %></strong></div>
+          <% }) %>
+        </article>
+        <article class="logbook-print-card">
+          <div class="logbook-print-section-head compact">
+            <p class="section-kicker">Exposure mix</p>
+            <h3>Complexity</h3>
+          </div>
+          <% summary.complexityMix.forEach((item) => { %>
+            <div class="metric-row"><span><%= pretty(item.label) %></span><strong><%= item.count %></strong></div>
+          <% }) %>
+        </article>
+      </section>
+
+      <section class="logbook-print-section print-panel">
+        <div class="logbook-print-section-head">
+          <p class="section-kicker">Review dashboard</p>
+          <h2>Exposure matrix</h2>
+        </div>
+        <div class="logbook-print-matrix">
+          <article>
+            <h3>Domain mix</h3>
+            <% summary.domainMix.forEach((item) => { %>
+              <div class="logbook-print-bar-row"><span><%= pretty(item.label) %></span><strong><%= item.count %></strong></div>
+            <% }) %>
+          </article>
+          <article>
+            <h3>Technique mix</h3>
+            <% summary.techniqueMix.forEach((item) => { %>
+              <div class="logbook-print-bar-row"><span><%= pretty(item.label) %></span><strong><%= item.count %></strong></div>
+            <% }) %>
+          </article>
+          <article>
+            <h3>Urgency mix</h3>
+            <% summary.urgencyMix.forEach((item) => { %>
+              <div class="logbook-print-bar-row"><span><%= pretty(item.label) %></span><strong><%= item.count %></strong></div>
+            <% }) %>
+          </article>
+        </div>
+      </section>
+
+      <section class="logbook-print-section print-panel">
+        <div class="logbook-print-section-head">
+          <p class="section-kicker">Case register</p>
+          <h2>Structured de-identified case ledger</h2>
+        </div>
+        <% if (!entries.length) { %>
+          <div class="empty-state">No logbook entries in this period.</div>
+        <% } %>
+        <% if (entries.length) { %>
+          <div class="logbook-print-table-shell">
+            <table class="logbook-print-table">
+              <thead>
+                <tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">Case / procedure</th>
+                  <th scope="col">Department / type</th>
+                  <th scope="col">Anaesthesia</th>
+                  <th scope="col">Procedures / outcome</th>
+                  <th scope="col">Learning points</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% entries.forEach((entry) => { %>
+                  <tr>
+                    <td>
+                      <strong><%= entry.activityDate %></strong><br />
+                      <span><%= showText(entry.surgeryStartTime) %> - <%= showText(entry.surgeryEndTime) %></span><br />
+                      <span><%= entry.durationMinutes ? `${entry.durationMinutes} min` : "-" %></span>
+                    </td>
+                    <td>
+                      <strong><%= caseLabel(entry) %></strong><br />
+                      <strong><%= entry.procedureName %></strong>
+                      <% if (entry.hadComplication) { %>
+                        <span class="logbook-print-flag">Flagged event</span>
+                      <% } %>
+                    </td>
+                    <td>
+                      <strong><%= showText(entry.surgicalDepartment) %></strong><br />
+                      <span><%= entry.caseType %> | OT <%= showText(entry.otNumber) %></span><br />
+                      <span><%= showText(entry.ageYears) %> y | <%= showText(entry.gender) %> | <%= formatAsa(entry.asaPhysicalStatus) %></span>
+                    </td>
+                    <td>
+                      <strong><%= showText(entry.anaestheticPlanned || pretty(entry.anaesthesiaTechnique)) %></strong><br />
+                      <span>Supervision: <%= showText(entry.supervisionLevel) %></span>
+                      <% if (entry.airwayManagement) { %>
+                        <br /><span>Airway: <%= showText(entry.airwayManagement) %></span>
+                      <% } %>
+                      <% if (entry.scopyTechnique) { %>
+                        <br /><span>Scopy: <%= showText(entry.scopyTechnique) %></span>
+                      <% } %>
+                    </td>
+                    <td>
+                      <span>Procedures: <%= joinItems(entry.procedures) %></span><br />
+                      <span>Analgesia: <%= joinItems(entry.analgesiaItems) %></span><br />
+                      <span>Post op: <%= joinItems(entry.postOperativeCare) %></span>
+                      <% if (entry.hadComplication) { %>
+                        <br /><span>Events: <%= showText(entry.complicationSummary) %></span>
+                      <% } %>
+                    </td>
+                    <td><%= joinItems(entry.learningPoints) %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </section>
+
+      <section class="logbook-print-section print-panel signature-panel">
+        <div class="logbook-print-section-head">
+          <p class="section-kicker">Official review record</p>
+          <h2>Attestation and comments</h2>
+        </div>
+        <div class="logbook-print-signature-grid">
+          <article><span>Faculty / Chief reviewer</span><strong>Signature</strong></article>
+          <article><span>Date of review</span><strong>DD / MM / YYYY</strong></article>
+          <article><span>Reviewer comments</span><strong></strong></article>
+        </div>
+      </section>
+
+      <section class="logbook-print-footer print-panel">
+        <p>Unit 3 Anaesthesia Management System · Christian Medical College, Vellore</p>
+        <p><%= reportId %> | Generated <%= generatedDate %></p>
+      </section>
+    </main>
+  </body>
+</html>

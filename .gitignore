@@ -1,0 +1,70 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.next/
+out/
+
+# Test and coverage output
+coverage/
+playwright-report/
+test-results/
+.vitest/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+Credentials/
+*.pem
+*.key
+*.crt
+
+# Local runtime files
+*.log
+*.err
+*.pid
+.cookies.txt
+.server.*
+.dev-*.log
+
+# Local databases and dumps
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.sql.gz
+*.backup
+
+# H5P runtime/editor storage
+h5p-storage/
+.h5p-refresh/
+
+# Uploaded/generated files
+uploads/
+storage/
+tmp/
+temp/
+
+# Debug screenshots and local scratch material
+debug/
+Developement/
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Package manager cache noise
+.npm/
+.yarn/
+.pnpm-store/
+
+# Keep source, docs, tests, public assets, and package-lock.json tracked.
+node_modules

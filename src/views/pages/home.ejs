@@ -1,0 +1,74 @@
+<%- include("../partials/header", { title, currentUser, flash }) %>
+<section class="hero">
+  <section class="hero-main">
+    <p class="eyebrow">Unit operations, learning, and trainee progress in one place</p>
+    <h1>Premium connected management for Unit 3 Anaesthesia</h1>
+    <p class="lead">
+      Bring postgraduate training, weekly supervision, SOPs, e-learning,
+      and teaching archives into one clear, dependable place.
+    </p>
+    <div class="hero-actions">
+      <a class="button-link button-link-primary" href="/auth/login">
+        <span class="iconify" data-icon="ph:sign-in-bold"></span>
+        Sign in
+      </a>
+      <a class="button-link button-link-secondary" href="/auth/register">
+        <span class="iconify" data-icon="ph:user-plus-bold"></span>
+        Create account
+      </a>
+      <a class="button-link button-link-secondary" href="/health">
+        <span class="iconify" data-icon="ph:heartbeat-bold"></span>
+        System health
+      </a>
+    </div>
+    <div class="hero-note">
+      Built for Christian Medical College, Vellore with a visual language centered on clarity,
+      accountability, and low-friction academic operations.
+    </div>
+  </section>
+  <aside class="hero-panel">
+    <div class="logo-frame">
+      <img src="/assets/logo-transparent.png" alt="Christian Medical College crest" />
+    </div>
+    <div class="section-header">
+      <div>
+        <p class="section-kicker">Platform scope</p>
+        <h2>What this system brings together</h2>
+      </div>
+    </div>
+    <ul class="clean-list">
+      <li>Different views for administration, faculty, trainees, and reviewers</li>
+      <li>Structured logbooks with weekly review and sign-off visibility</li>
+      <li>SOP review and document history in one place</li>
+      <li>Learning resources, interactive activities, and short courses in one library</li>
+      <li>Case archives for teaching use without public patient identifiers</li>
+    </ul>
+  </aside>
+</section>
+<section class="grid-three">
+  <article class="kpi-card">
+    <div class="kpi-icon">
+      <span class="iconify" data-icon="ph:gear-six-bold"></span>
+    </div>
+    <p class="section-kicker">Operations</p>
+    <h3>Clear routines</h3>
+    <p class="section-copy">Log submissions, role assignment, and review decisions stay visible and easy to follow.</p>
+  </article>
+  <article class="kpi-card">
+    <div class="kpi-icon">
+      <span class="iconify" data-icon="ph:book-open-bold"></span>
+    </div>
+    <p class="section-kicker">Education</p>
+    <h3>Curated learning</h3>
+    <p class="section-copy">Articles, interactive activities, and short courses can sit beside real unit progress data.</p>
+  </article>
+  <article class="kpi-card">
+    <div class="kpi-icon">
+      <span class="iconify" data-icon="ph:shield-check-bold"></span>
+    </div>
+    <p class="section-kicker">Trust</p>
+    <h3>Clinical trust</h3>
+    <p class="section-copy">A restrained interface tuned for healthcare and academic use, not generic admin clutter.</p>
+  </article>
+</section>
+<%- include("../partials/footer") %>

@@ -1,0 +1,274 @@
+<%- include("../partials/header", { title, currentUser, flash }) %>
+<section class="sop-page-stack">
+  <section class="panel sop-toolbar-panel">
+    <p class="eyebrow">SOPs</p>
+    <h1><%= canCompose ? "Find, review, and update unit SOPs quickly" : "Search and read current unit SOPs quickly" %></h1>
+    <p class="section-copy">
+      <%= canReview
+        ? "Published and in-progress SOPs should be easy to locate, filter, and review without losing track of the latest approved version."
+        : "Use this library to locate the published SOPs that apply to your work." %>
+    </p>
+    <form action="/documents" method="get" class="stack-form sop-filter-form">
+      <div class="sop-toolbar-grid">
+        <label>
+          <span>Search title, subtitle, or scope</span>
+          <input type="text" name="search" value="<%= filters.search ?? '' %>" />
+        </label>
+        <div class="inline-form">
+          <label>
+            <span>Category</span>
+            <select name="category">
+              <option value="">All categories</option>
+              <% categories.forEach((category) => { %>
+                <option value="<%= category %>" <%= filters.category === category ? "selected" : "" %>><%= category %></option>
+              <% }) %>
+            </select>
+          </label>
+          <% if (canReview) { %>
+            <label>
+              <span>Status</span>
+              <select name="status">
+                <option value="">All statuses</option>
+                <% ["draft", "in_review", "changes_requested", "approved", "published", "archived"].forEach((status) => { %>
+                  <option value="<%= status %>" <%= filters.status === status ? "selected" : "" %>><%= status %></option>
+                <% }) %>
+              </select>
+            </label>
+          <% } %>
+        </div>
+        <div class="sop-toolbar-actions">
+          <button type="submit">Search SOPs</button>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  <% if (canCompose) { %>
+    <section class="panel sop-composer-panel">
+      <div class="section-header">
+        <div>
+          <p class="section-kicker">New SOP</p>
+          <h2>Create a new SOP</h2>
+        </div>
+      </div>
+      <form action="/documents" method="post" enctype="multipart/form-data" class="stack-form sop-composer-form">
+        <details class="sop-meta-drawer" open>
+          <summary class="sop-meta-summary">
+            <div>
+              <p class="section-kicker">Details</p>
+              <h3>Document details and review dates</h3>
+            </div>
+            <span class="pill">Collapse or expand</span>
+          </summary>
+          <div class="sop-meta-drawer-body">
+            <div class="sop-composer-meta-grid">
+              <label><span>Title</span><input type="text" name="title" required /></label>
+              <label><span>Subtitle</span><input type="text" name="subtitle" placeholder="Short summary" /></label>
+            </div>
+            <div class="sop-composer-meta-grid">
+              <label><span>Category</span><input type="text" name="category" placeholder="Airway, OT, ICU, Safety" required /></label>
+              <label><span>Scope area</span><input type="text" name="scopeArea" placeholder="Unit or clinical area" /></label>
+            </div>
+            <div class="sop-composer-meta-grid sop-composer-meta-grid-wide">
+              <label><span>Visibility</span><input type="text" name="visibility" value="unit_internal" required /></label>
+              <label><span>Effective date</span><input type="date" name="effectiveDate" /></label>
+              <label><span>Review due date</span><input type="date" name="reviewDueDate" /></label>
+            </div>
+            <div class="sop-composer-meta-grid">
+              <label><span>Version note</span><input type="text" name="versionNotes" placeholder="Initial issue or revision note" required /></label>
+              <label><span>Change summary</span><textarea name="changeSummary" rows="3" placeholder="What this SOP covers or what changed"></textarea></label>
+            </div>
+          </div>
+        </details>
+        <section class="sop-composer" data-sop-composer>
+          <div class="sop-composer-header">
+            <div>
+              <p class="section-kicker">Writing area</p>
+              <h3>Write with structure and preview</h3>
+              <p class="section-copy">
+                Draft SOPs using reusable clinical sections, quick-insert snippets, and a live preview.
+              </p>
+            </div>
+            <div class="tag-row">
+              <span class="pill">Structured drafting</span>
+              <span class="pill">Live preview</span>
+            </div>
+          </div>
+
+          <div class="sop-toolbar-groups">
+            <section class="sop-toolbar-group">
+              <span class="sop-toolbar-label">Templates</span>
+              <div class="sop-segmented-control sop-composer-presets">
+                <button type="button" class="button-link button-link-secondary" data-sop-template="general">General</button>
+                <button type="button" class="button-link button-link-secondary" data-sop-template="airway">Airway</button>
+                <button type="button" class="button-link button-link-secondary" data-sop-template="icu">ICU</button>
+                <button type="button" class="button-link button-link-secondary" data-sop-template="safety">Safety</button>
+              </div>
+            </section>
+
+            <section class="sop-toolbar-group">
+              <span class="sop-toolbar-label">Quick insert</span>
+              <div class="sop-segmented-control sop-composer-tools">
+                <button type="button" class="button-link button-link-secondary" data-sop-insert="heading">Heading</button>
+                <button type="button" class="button-link button-link-secondary" data-sop-insert="subheading">Subheading</button>
+                <button type="button" class="button-link button-link-secondary" data-sop-insert="numbered">Steps</button>
+                <button type="button" class="button-link button-link-secondary" data-sop-insert="bullet">Bullets</button>
+                <button type="button" class="button-link button-link-secondary" data-sop-insert="warning">Precautions</button>
+                <button type="button" class="button-link button-link-secondary" data-sop-insert="signoff">Sign-off</button>
+              </div>
+            </section>
+          </div>
+
+          <div class="sop-composer-grid">
+            <div class="sop-editor-pane">
+              <label>
+                <span>SOP content</span>
+                <textarea
+                  name="contentHtml"
+                  rows="18"
+                  placeholder="Compose the SOP content here with headings, numbered steps, precautions, and notes."
+                  required
+                  data-sop-editor
+                ></textarea>
+              </label>
+              <div class="sop-structure-board">
+                <div class="sop-structure-card">
+                  <strong>Recommended section flow</strong>
+                  <ul class="clean-list">
+                    <li>Purpose or clinical intent</li>
+                    <li>Scope and responsibility</li>
+                    <li>Required equipment or preparation</li>
+                    <li>Stepwise procedure</li>
+                    <li>Precautions and escalation points</li>
+                    <li>Documentation and sign-off</li>
+                  </ul>
+                </div>
+                <div class="sop-structure-card">
+                  <strong>Writing tips</strong>
+                  <ul class="clean-list">
+                    <li>Keep headings short and scannable</li>
+                    <li>Use numbered steps for procedures</li>
+                    <li>State who is responsible where relevant</li>
+                    <li>Highlight safety-critical instructions clearly</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <aside class="sop-preview-pane">
+              <div class="section-header">
+                <div>
+                  <p class="section-kicker">Preview</p>
+                  <h3>How the SOP will look</h3>
+                </div>
+              </div>
+              <div class="sop-preview-tabs" role="tablist" aria-label="SOP preview modes">
+                <button type="button" class="button-link button-link-secondary is-active" data-sop-preview-tab="preview">Preview</button>
+                <button type="button" class="button-link button-link-secondary" data-sop-preview-tab="structure">Structure</button>
+                <button type="button" class="button-link button-link-secondary" data-sop-preview-tab="print">Print view</button>
+              </div>
+              <div class="sop-preview-surface" data-sop-preview>
+                <section class="sop-preview-panel is-active" data-sop-preview-panel="preview">
+                  <div class="sop-preview-empty">
+                    Start writing to see the SOP preview here.
+                  </div>
+                </section>
+                <section class="sop-preview-panel" data-sop-preview-panel="structure" hidden>
+                  <div class="sop-preview-empty">
+                    Section headings and procedural structure will appear here.
+                  </div>
+                </section>
+                <section class="sop-preview-panel" data-sop-preview-panel="print" hidden>
+                  <div class="sop-preview-empty">
+                    A print-ready SOP view will appear here.
+                  </div>
+                </section>
+              </div>
+            </aside>
+          </div>
+        </section>
+        <div class="sop-composer-footer">
+          <label><span>Optional attachment</span><input type="file" name="documentFile" /></label>
+        </div>
+        <div class="sop-composer-submit">
+          <button type="submit" name="action" value="save_draft">Save draft</button>
+          <button type="submit" name="action" value="submit_review">Submit for review</button>
+        </div>
+      </form>
+    </section>
+  <% } %>
+
+  <section class="panel">
+      <div class="section-header">
+        <div>
+          <p class="section-kicker">SOP register</p>
+          <h2><%= canReview ? "Current SOP list" : "Published SOPs" %></h2>
+        </div>
+      </div>
+    <% if (!documents.length) { %>
+      <div class="empty-state">No SOPs match the current search or filter.</div>
+    <% } %>
+    <% documents.forEach((document) => { %>
+      <article class="list-card">
+        <strong>
+          <a
+            href="/documents/<%= document.id %>"
+            data-sop-modal-trigger
+            data-sop-modal-url="/documents/<%= document.id %>/view"
+          ><%= document.title %></a>
+        </strong>
+        <% if (document.subtitle) { %>
+          <p class="meta-text"><%= document.subtitle %></p>
+        <% } %>
+        <div class="tag-row">
+          <span class="pill"><%= document.category %></span>
+          <% if (document.scopeArea) { %>
+            <span class="pill"><%= document.scopeArea %></span>
+          <% } %>
+          <span class="status-pill status-<%= document.status %>"><%= document.status %></span>
+          <span class="pill">Version <%= document.latestVersion %></span>
+        </div>
+        <p class="meta-text">Updated: <%= document.updatedAt %></p>
+        <% if (document.effectiveDate) { %>
+          <p class="meta-text">Effective date: <%= document.effectiveDate %></p>
+        <% } %>
+        <div class="list-actions">
+          <a
+            class="button-link button-link-secondary"
+            href="/documents/<%= document.id %>"
+            data-sop-modal-trigger
+            data-sop-modal-url="/documents/<%= document.id %>/view"
+          >
+            View SOP
+          </a>
+        </div>
+      </article>
+    <% }) %>
+  </section>
+</section>
+
+<dialog class="sop-modal" id="sop-modal">
+  <div class="sop-modal-shell">
+    <div class="sop-modal-topbar">
+      <div>
+        <p class="eyebrow">SOP</p>
+        <p class="section-copy">Read the SOP without leaving the library.</p>
+      </div>
+      <div class="sop-modal-controls">
+        <button type="button" class="button-link button-link-secondary sop-addon-toggle" data-sop-addon-toggle>
+          Enable section navigator
+        </button>
+        <button type="button" class="sop-modal-close" data-sop-modal-close aria-label="Close SOP">
+          <span class="iconify" data-icon="ph:x-bold"></span>
+        </button>
+      </div>
+    </div>
+    <div class="sop-modal-body" data-sop-modal-body>
+      <div class="sop-modal-loading">
+        <span class="iconify" data-icon="ph:spinner-gap-bold"></span>
+        Loading SOP...
+      </div>
+    </div>
+  </div>
+</dialog>
+<%- include("../partials/footer") %>

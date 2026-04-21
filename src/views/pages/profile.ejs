@@ -1,0 +1,176 @@
+<%- include("../partials/header", { title, currentUser, flash }) %>
+<section class="grid-two">
+  <section class="panel">
+    <p class="eyebrow">My Profile</p>
+    <h1>Personal details</h1>
+    <% const needsApproval = currentUser.role === 'postgraduate' || currentUser.role === 'reviewer'; %>
+    <% if (needsApproval) { %>
+      <p class="section-copy">
+        Your details are shown below. Submit changes using this form — an admin or unit chief will review and apply them.
+      </p>
+    <% } else { %>
+      <p class="section-copy">
+        Keep your professional details current so your account and unit records stay clear and up to date.
+      </p>
+    <% } %>
+
+    <% if (pendingRequest && pendingRequest.status === 'pending') { %>
+      <div class="callout callout-warning">
+        <span class="iconify" data-icon="ph:clock-countdown-bold"></span>
+        <div>
+          <strong>Change request pending review</strong>
+          <p class="section-copy">You submitted a profile change request on <%= new Date(pendingRequest.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) %>. An admin or unit chief will review it shortly. Fields below show your current saved profile.</p>
+          <% if (Object.keys(pendingRequest.requestedFields).length) { %>
+            <div class="profile-pending-fields">
+              <% Object.entries(pendingRequest.requestedFields).forEach(([key, val]) => { %>
+                <span class="pill"><%= key %>: <%= val %></span>
+              <% }) %>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    <% } %>
+
+    <% if (pendingRequest && pendingRequest.status === 'rejected') { %>
+      <div class="callout callout-danger">
+        <span class="iconify" data-icon="ph:x-circle-bold"></span>
+        <div>
+          <strong>Change request rejected</strong>
+          <p class="section-copy">Your most recent change request was not approved.<% if (pendingRequest.reviewerNotes) { %> Reason: <%= pendingRequest.reviewerNotes %><% } %></p>
+          <p class="section-copy">You can submit a new request using the form below.</p>
+        </div>
+      </div>
+    <% } %>
+
+    <form action="/profile" method="post" class="stack-form">
+      <div class="sop-composer-meta-grid">
+        <label>
+          <span>Full name</span>
+          <input type="text" value="<%= profile.name %>" readonly />
+        </label>
+        <label>
+          <span>Display name</span>
+          <input type="text" name="displayName" value="<%= profile.displayName ?? '' %>" />
+        </label>
+      </div>
+      <div class="sop-composer-meta-grid">
+        <label>
+          <span>Username</span>
+          <input type="text" value="<%= profile.username %>" readonly />
+        </label>
+        <label>
+          <span>Email</span>
+          <input type="email" value="<%= profile.email %>" readonly />
+        </label>
+      </div>
+      <div class="sop-composer-meta-grid">
+        <label>
+          <span>Phone</span>
+          <input type="text" name="phone" value="<%= profile.phone ?? '' %>" />
+        </label>
+        <label>
+          <span>Designation</span>
+          <input type="text" name="designation" value="<%= profile.designation ?? '' %>" />
+        </label>
+      </div>
+      <div class="sop-composer-meta-grid">
+        <label>
+          <span>Department</span>
+          <input type="text" name="department" value="<%= profile.department ?? '' %>" />
+        </label>
+        <label>
+          <span>Training year</span>
+          <input type="text" name="trainingYear" value="<%= profile.trainingYear ?? '' %>" />
+        </label>
+      </div>
+      <div class="sop-composer-meta-grid">
+        <label>
+          <span>Employee / Student ID</span>
+          <input type="text" name="employeeOrStudentId" value="<%= profile.employeeOrStudentId ?? '' %>" />
+        </label>
+        <label>
+          <span>Joining date</span>
+          <input type="date" name="joiningDate" value="<%= profile.joiningDate ?? '' %>" />
+        </label>
+      </div>
+      <label>
+        <span>Notes</span>
+        <textarea name="notes" rows="5" placeholder="Optional professional notes relevant to unit administration or role context"><%= profile.notes ?? '' %></textarea>
+      </label>
+      <div class="sop-composer-submit">
+        <% if (needsApproval) { %>
+          <button type="submit">
+            <span class="iconify" data-icon="ph:paper-plane-tilt-bold"></span>
+            Submit change request
+          </button>
+          <p class="section-copy" style="margin:0; font-size: 0.8rem; color: var(--surface-muted);">Changes require admin or unit-chief approval before they take effect.</p>
+        <% } else { %>
+          <button type="submit">
+            <span class="iconify" data-icon="ph:floppy-disk-bold"></span>
+            Save profile
+          </button>
+        <% } %>
+      </div>
+    </form>
+  </section>
+
+  <aside class="panel">
+    <p class="section-kicker">Current account state</p>
+    <h2>Account summary</h2>
+    <div class="tag-row">
+      <span class="pill"><%= profile.roleName %></span>
+      <span class="status-pill status-<%= profile.status === 'active' ? 'approved' : profile.status %>"><%= profile.status %></span>
+      <% if (currentUser.mustChangePassword) { %>
+        <span class="status-pill status-submitted">Password update required</span>
+      <% } %>
+      <% if (pendingRequest && pendingRequest.status === 'pending') { %>
+        <span class="status-pill status-submitted">Profile change pending</span>
+      <% } %>
+    </div>
+    <ul class="clean-list">
+      <li>Role: <strong><%= profile.roleName %></strong></li>
+      <li>Status: <strong><%= profile.status %></strong></li>
+      <% if (currentUser.mustChangePassword) { %>
+        <li>You must set a new password before returning to the rest of the site.</li>
+      <% } %>
+      <% if (needsApproval) { %>
+        <li>Profile changes you submit are reviewed by an admin or unit chief before taking effect.</li>
+      <% } else { %>
+        <li>Use your display name to control how your name appears in the site.</li>
+        <li>Password, access, and account-status changes are managed by the admin team.</li>
+      <% } %>
+    </ul>
+  </aside>
+</section>
+
+<section class="panel">
+  <div class="section-header">
+    <div>
+      <p class="section-kicker">Password security</p>
+      <h2>Change your password</h2>
+    </div>
+  </div>
+  <form action="/profile/password" method="post" class="stack-form narrow">
+    <label>
+      <span>Current password</span>
+      <input type="password" name="currentPassword" required />
+    </label>
+    <div class="sop-composer-meta-grid">
+      <label>
+        <span>New password</span>
+        <input type="password" name="newPassword" minlength="8" required />
+      </label>
+      <label>
+        <span>Confirm new password</span>
+        <input type="password" name="confirmPassword" minlength="8" required />
+      </label>
+    </div>
+    <div class="sop-composer-submit">
+      <button type="submit">
+        <span class="iconify" data-icon="ph:lock-key-bold"></span>
+        Change password
+      </button>
+    </div>
+  </form>
+</section>
+<%- include("../partials/footer") %>

@@ -1,0 +1,187 @@
+<%
+  const pretty = (value) =>
+    String(value || "")
+      .split("_")
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  const showText = (value) => String(value ?? "").trim() || "-";
+  const joinItems = (items) => (Array.isArray(items) && items.length ? items.join(", ") : "-");
+  const caseLabel = entry.caseNumber ? `Case ${entry.caseNumber}` : "Case pending";
+  const generatedDate = generatedAt.slice(0, 16).replace("T", " ");
+  const reportId = `U3-CASE-${entry.activityDate.replace(/-/g, "")}-${entry.id.slice(0, 8).toUpperCase()}`;
+  const formatAsa = (value) => {
+    const normalized = String(value || "").trim();
+    if (!normalized) {
+      return "-";
+    }
+
+    return normalized.startsWith("asa_")
+      ? `ASA ${normalized.slice(4).toUpperCase()}`
+      : normalized;
+  };
+%>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="print-page print-page-logbook">
+    <main class="print-sheet logbook-print-sheet logbook-case-print-sheet">
+      <section class="print-toolbar no-print">
+        <button type="button" onclick="window.print()">Print case</button>
+        <a class="button-link button-link-secondary" href="/logbook">Back to logbook</a>
+      </section>
+
+      <section class="logbook-print-cover print-panel official-report-cover">
+        <div class="logbook-print-document-band">
+          <span>Official de-identified case record</span>
+          <strong><%= reportId %></strong>
+        </div>
+        <div class="logbook-print-brand">
+          <span class="logbook-print-brand-mark">
+            <img src="/assets/logo-transparent.png" alt="Christian Medical College crest" />
+          </span>
+          <div>
+            <p class="eyebrow">Christian Medical College, Vellore</p>
+            <h1>Unit 3 Anaesthesia Case Record</h1>
+            <p class="section-copy">
+              Single-case printable logbook extract for academic review, portfolio documentation, and faculty discussion.
+            </p>
+          </div>
+        </div>
+
+        <div class="logbook-print-meta-grid">
+          <article class="logbook-print-meta-card">
+            <span>Report subject</span>
+            <strong><%= entry.userName %></strong>
+          </article>
+          <article class="logbook-print-meta-card">
+            <span>Case reference</span>
+            <strong><%= caseLabel %></strong>
+          </article>
+          <article class="logbook-print-meta-card">
+            <span>Activity date</span>
+            <strong><%= entry.activityDate %></strong>
+          </article>
+          <article class="logbook-print-meta-card">
+            <span>Generated</span>
+            <strong><%= generatedDate %></strong>
+          </article>
+        </div>
+
+        <div class="logbook-print-control-grid">
+          <article><span>Unit</span><strong>Unit 3 Anaesthesia</strong></article>
+          <article><span>Mode</span><strong><%= printMode === "team" ? "Faculty / Chief review" : "Personal logbook" %></strong></article>
+          <article><span>Classification</span><strong>Internal de-identified record</strong></article>
+        </div>
+      </section>
+
+      <section class="logbook-print-section print-panel">
+        <div class="logbook-print-section-head">
+          <p class="section-kicker">Case identity</p>
+          <h2><%= entry.procedureName %></h2>
+        </div>
+        <div class="logbook-case-print-grid">
+          <article><span>Case type</span><strong><%= entry.caseType %></strong></article>
+          <article><span>Surgical department</span><strong><%= showText(entry.surgicalDepartment) %></strong></article>
+          <article><span>OT number</span><strong><%= showText(entry.otNumber) %></strong></article>
+          <article><span>Specialty</span><strong><%= pretty(entry.specialtyArea) || "-" %></strong></article>
+          <article><span>Urgency</span><strong><%= pretty(entry.urgency) || "-" %></strong></article>
+          <article><span>Complexity</span><strong><%= pretty(entry.complexityLevel) || "-" %></strong></article>
+          <article><span>Location</span><strong><%= pretty(entry.location) || "-" %></strong></article>
+          <article><span>Duration</span><strong><%= entry.durationMinutes ? `${entry.durationMinutes} minutes` : "-" %></strong></article>
+        </div>
+      </section>
+
+      <section class="logbook-print-section print-panel">
+        <div class="logbook-print-section-head">
+          <p class="section-kicker">Clinical details</p>
+          <h2>Anaesthesia, patient band, and participation</h2>
+        </div>
+        <div class="logbook-case-print-grid">
+          <article><span>Age</span><strong><%= showText(entry.ageYears) %></strong></article>
+          <article><span>Gender</span><strong><%= showText(entry.gender) %></strong></article>
+          <article><span>BMI</span><strong><%= entry.bmi ?? "-" %></strong></article>
+          <article><span>ASA</span><strong><%= formatAsa(entry.asaPhysicalStatus) %></strong></article>
+          <article><span>Anaesthetic plan</span><strong><%= showText(entry.anaestheticPlanned || pretty(entry.anaesthesiaTechnique)) %></strong></article>
+          <article><span>Airway</span><strong><%= showText(entry.airwayManagement) %></strong></article>
+          <article><span>Scopy technique</span><strong><%= showText(entry.scopyTechnique) %></strong></article>
+          <article><span>Supervision</span><strong><%= showText(entry.supervisionLevel) %></strong></article>
+          <article><span>Participation</span><strong><%= pretty(entry.participationLevel) || "-" %></strong></article>
+          <article><span>Surgery start</span><strong><%= showText(entry.surgeryStartTime) %></strong></article>
+          <article><span>Surgery end</span><strong><%= showText(entry.surgeryEndTime) %></strong></article>
+          <article><span>Post-operative care</span><strong><%= joinItems(entry.postOperativeCare) %></strong></article>
+        </div>
+      </section>
+
+      <section class="logbook-print-section print-panel">
+        <div class="logbook-print-section-head">
+          <p class="section-kicker">Procedure record</p>
+          <h2>Skills, analgesia, and perioperative notes</h2>
+        </div>
+        <div class="logbook-case-print-notes">
+          <article>
+            <span>Comorbidities</span>
+            <p><%= joinItems(entry.comorbidities) %></p>
+          </article>
+          <article>
+            <span>Procedures performed / observed</span>
+            <p><%= joinItems(entry.procedures) %></p>
+          </article>
+          <article>
+            <span>Analgesia / blocks</span>
+            <p><%= joinItems(entry.analgesiaItems) %></p>
+          </article>
+          <article>
+            <span>Intraoperative events</span>
+            <p><%= entry.hadComplication ? showText(entry.complicationSummary) : "No flagged intraoperative event recorded." %></p>
+          </article>
+        </div>
+      </section>
+
+      <section class="logbook-print-section print-panel">
+        <div class="logbook-print-section-head">
+          <p class="section-kicker">Reflection</p>
+          <h2>Learning points</h2>
+        </div>
+        <% if (!entry.learningPoints.length) { %>
+          <div class="empty-state">No learning points recorded.</div>
+        <% } %>
+        <% if (entry.learningPoints.length) { %>
+          <ol class="logbook-case-print-learning">
+            <% entry.learningPoints.forEach((point) => { %>
+              <li><%= point %></li>
+            <% }) %>
+          </ol>
+        <% } %>
+        <% if (entry.reflectionNotes) { %>
+          <div class="logbook-case-print-reflection">
+            <span>Additional reflection</span>
+            <p><%= entry.reflectionNotes %></p>
+          </div>
+        <% } %>
+      </section>
+
+      <section class="logbook-print-section print-panel signature-panel">
+        <div class="logbook-print-section-head">
+          <p class="section-kicker">Verification</p>
+          <h2>Academic sign-off</h2>
+        </div>
+        <div class="logbook-print-signature-grid">
+          <article><span>Trainee / candidate</span><strong><%= entry.userName %></strong></article>
+          <article><span>Date</span><strong></strong></article>
+          <article><span>Faculty / Unit chief signature</span><strong></strong></article>
+        </div>
+      </section>
+
+      <footer class="logbook-print-footer">
+        <p>Generated from Unit 3 Management System. This printout is de-identified and intended for official academic use.</p>
+        <p><%= reportId %></p>
+      </footer>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,199 @@
+<%- include("../partials/header", { title, currentUser, flash }) %>
+<section class="panel">
+  <p class="eyebrow">User Detail</p>
+  <h1><%= person.display_name ?? person.name %></h1>
+  <p class="section-copy">
+    Review profile details, account status, role assignment, and recent account activity for this user.
+  </p>
+  <div class="tag-row">
+    <span class="pill"><%= person.username %></span>
+    <span class="pill"><%= person.email %></span>
+    <span class="pill"><%= person.role_name %></span>
+    <span class="status-pill status-<%= person.status === 'active' ? 'approved' : person.status %>"><%= person.status %></span>
+    <% if (person.can_review_cases) { %>
+      <span class="pill">Can review cases</span>
+    <% } %>
+    <% if (person.must_change_password) { %>
+      <span class="status-pill status-submitted">Must change password</span>
+    <% } %>
+  </div>
+</section>
+
+<section class="grid-two">
+  <section class="panel">
+    <div class="section-header">
+      <div>
+        <p class="section-kicker">Profile</p>
+        <h2>Edit user record</h2>
+      </div>
+    </div>
+    <form action="/admin/users/<%= person.id %>/profile" method="post" class="stack-form">
+      <div class="sop-composer-meta-grid">
+        <label>
+          <span>Full name</span>
+          <input type="text" value="<%= person.name %>" readonly />
+        </label>
+        <label>
+          <span>Display name</span>
+          <input type="text" name="displayName" value="<%= person.display_name ?? '' %>" />
+        </label>
+      </div>
+      <div class="sop-composer-meta-grid">
+        <label>
+          <span>Username</span>
+          <input type="text" value="<%= person.username %>" readonly />
+        </label>
+        <label>
+          <span>Email</span>
+          <input type="email" value="<%= person.email %>" readonly />
+        </label>
+      </div>
+      <div class="sop-composer-meta-grid">
+        <label>
+          <span>Phone</span>
+          <input type="text" name="phone" value="<%= person.phone ?? '' %>" />
+        </label>
+        <label>
+          <span>Designation</span>
+          <input type="text" name="designation" value="<%= person.designation ?? '' %>" />
+        </label>
+      </div>
+      <div class="sop-composer-meta-grid">
+        <label>
+          <span>Department</span>
+          <input type="text" name="department" value="<%= person.department ?? '' %>" />
+        </label>
+        <label>
+          <span>Training year</span>
+          <input type="text" name="trainingYear" value="<%= person.training_year ?? '' %>" />
+        </label>
+      </div>
+      <div class="sop-composer-meta-grid">
+        <label>
+          <span>Employee / Student ID</span>
+          <input type="text" name="employeeOrStudentId" value="<%= person.employee_or_student_id ?? '' %>" />
+        </label>
+        <label>
+          <span>Joining date</span>
+          <input type="date" name="joiningDate" value="<%= person.joining_date ?? '' %>" />
+        </label>
+      </div>
+      <label>
+        <span>Notes</span>
+        <textarea name="notes" rows="5"><%= person.notes ?? '' %></textarea>
+      </label>
+      <div class="sop-composer-submit">
+        <button type="submit">Save profile</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <div class="section-header">
+      <div>
+        <p class="section-kicker">Access</p>
+        <h2>Role and account controls</h2>
+      </div>
+    </div>
+    <form action="/admin/users/<%= person.id %>/role" method="post" class="stack-form">
+      <label>
+        <span>Role assignment</span>
+        <select name="roleKey">
+          <% roles.forEach((role) => { %>
+            <option value="<%= role.key %>" <%= person.role_key === role.key ? "selected" : "" %>><%= role.name %></option>
+          <% }) %>
+        </select>
+      </label>
+      <button type="submit" class="button-link button-link-secondary">Update role</button>
+    </form>
+
+    <form action="/admin/users/<%= person.id %>/case-review-access" method="post" class="stack-form" style="margin-top: 1rem;">
+      <label>
+        <span>Case review permission</span>
+        <select name="canReviewCases">
+          <option value="false" <%= !person.can_review_cases ? "selected" : "" %>>No extra case review access</option>
+          <option value="true" <%= person.can_review_cases ? "selected" : "" %>>Can review and suggest edits in cases</option>
+        </select>
+      </label>
+      <button type="submit" class="button-link button-link-secondary">Update case review access</button>
+    </form>
+
+    <div class="admin-status-grid">
+      <article class="callout">
+        <p class="section-kicker">Account dates</p>
+        <p>Registered: <strong><%= person.created_at %></strong></p>
+        <p>Approved: <strong><%= person.approved_at ?? 'Not yet approved' %></strong></p>
+        <p>Suspended: <strong><%= person.suspended_at ?? 'Not suspended' %></strong></p>
+        <p>Archived: <strong><%= person.archived_at ?? 'Not archived' %></strong></p>
+        <p>Password rotation required: <strong><%= person.must_change_password ? 'Yes' : 'No' %></strong></p>
+      </article>
+    </div>
+
+    <div class="admin-action-row">
+      <% if (person.status !== 'active') { %>
+        <form action="/admin/users/<%= person.id %>/status" method="post">
+          <input type="hidden" name="status" value="active" />
+          <button type="submit">Set active</button>
+        </form>
+      <% } %>
+      <% if (person.status !== 'suspended') { %>
+        <form action="/admin/users/<%= person.id %>/status" method="post">
+          <input type="hidden" name="status" value="suspended" />
+          <button type="submit" class="button-link button-link-secondary">Suspend</button>
+        </form>
+      <% } %>
+      <% if (person.status !== 'archived') { %>
+        <form action="/admin/users/<%= person.id %>/status" method="post">
+          <input type="hidden" name="status" value="archived" />
+          <button type="submit" class="button-link button-link-secondary">Archive</button>
+        </form>
+      <% } %>
+    </div>
+
+    <div class="section-header">
+      <div>
+        <p class="section-kicker">Password</p>
+        <h2>Set a new password</h2>
+      </div>
+    </div>
+    <form action="/admin/users/<%= person.id %>/password" method="post" class="stack-form">
+      <div class="sop-composer-meta-grid">
+        <label>
+          <span>New password</span>
+          <input type="password" name="newPassword" minlength="8" required />
+        </label>
+        <label>
+          <span>Confirm new password</span>
+          <input type="password" name="confirmPassword" minlength="8" required />
+        </label>
+      </div>
+      <div class="sop-composer-submit">
+        <button type="submit" class="button-link button-link-secondary">Set user password</button>
+      </div>
+    </form>
+  </section>
+</section>
+
+<section class="panel">
+  <div class="section-header">
+    <div>
+      <p class="section-kicker">Audit trail</p>
+      <h2>Recent account activity</h2>
+    </div>
+  </div>
+  <% if (!auditEvents.length) { %>
+    <div class="empty-state">No account activity recorded for this user yet.</div>
+  <% } %>
+  <% auditEvents.forEach((event) => { %>
+    <article class="list-card">
+      <strong><%= event.action %></strong>
+      <div class="tag-row">
+        <span class="pill"><%= event.created_at %></span>
+        <% if (event.actor_name) { %>
+          <span class="pill"><%= event.actor_name %></span>
+        <% } %>
+      </div>
+    </article>
+  <% }) %>
+</section>
+<%- include("../partials/footer") %>

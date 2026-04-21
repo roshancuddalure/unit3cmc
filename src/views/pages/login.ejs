@@ -1,0 +1,34 @@
+<%- include("../partials/header", { title, currentUser, flash }) %>
+<section class="grid-two">
+  <section class="panel auth-card">
+    <p class="eyebrow">Secure sign in</p>
+    <h1>Sign in to Unit 3</h1>
+    <p class="section-copy">Use your unit account to access dashboards, logbooks, documents, learning modules, and reviews.</p>
+    <form action="/auth/login" method="post" class="stack-form">
+      <label>
+        <span>Email or username</span>
+        <input type="text" name="identity" required />
+      </label>
+      <label>
+        <span>Password</span>
+        <input type="password" name="password" required />
+      </label>
+      <button type="submit">Sign in</button>
+    </form>
+    <p class="helper-text">New postgraduate or staff member? <a href="/auth/register">Create an account</a></p>
+    <p class="helper-text">Repeated failed sign-in attempts will trigger a short security cooldown.</p>
+  </section>
+  <aside class="panel">
+    <div class="logo-frame">
+      <img src="/assets/logo-transparent.png" alt="Christian Medical College crest" />
+    </div>
+    <p class="section-kicker">Access</p>
+    <h2>Approved access for each user</h2>
+    <ul class="clean-list">
+      <li>Faculty and administrators handle approvals and access changes.</li>
+      <li>New accounts remain pending until Unit 3 administration activates them.</li>
+      <li>Your signed-in session keeps the web experience simple and secure.</li>
+    </ul>
+  </aside>
+</section>
+<%- include("../partials/footer") %>

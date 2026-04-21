@@ -1,0 +1,68 @@
+<%- include("../partials/header", { title, currentUser, flash }) %>
+<section class="grid-two">
+  <section class="panel auth-card">
+    <p class="eyebrow">Registration</p>
+    <h1>Create your Unit 3 account</h1>
+    <p class="section-copy">
+      New users are registered first in a pending state so access can be reviewed safely by unit leadership before the internal workspace opens.
+    </p>
+    <form action="/auth/register" method="post" class="stack-form">
+      <div class="inline-form">
+        <label>
+          <span>Full name</span>
+          <input type="text" name="name" required />
+        </label>
+        <label>
+          <span>Username</span>
+          <input type="text" name="username" required />
+        </label>
+      </div>
+      <div class="inline-form">
+        <label>
+          <span>Email</span>
+          <input type="email" name="email" required />
+        </label>
+        <label>
+          <span>Phone</span>
+          <input type="text" name="phone" />
+        </label>
+      </div>
+      <div class="inline-form">
+        <label>
+          <span>Designation</span>
+          <input type="text" name="designation" placeholder="Postgraduate, Consultant, Faculty" />
+        </label>
+        <label>
+          <span>Department</span>
+          <input type="text" name="department" value="Anaesthesia" />
+        </label>
+      </div>
+      <div class="inline-form">
+        <label>
+          <span>Training year</span>
+          <input type="text" name="trainingYear" placeholder="PGY1, PGY2, Senior resident" />
+        </label>
+        <label>
+          <span>Employee / Student ID</span>
+          <input type="text" name="employeeOrStudentId" />
+        </label>
+      </div>
+      <label>
+        <span>Password</span>
+        <input type="password" name="password" minlength="8" required />
+      </label>
+      <button type="submit">Register</button>
+    </form>
+    <p class="helper-text">Already have an account? <a href="/auth/login">Sign in</a></p>
+  </section>
+  <aside class="panel">
+    <p class="section-kicker">What happens next</p>
+    <h2>Designed for safe onboarding</h2>
+    <ul class="clean-list">
+      <li>Your account request is recorded inside the Unit 3 system and awaits approval.</li>
+      <li>Permissions are activated only after admin review, so the workspace stays controlled.</li>
+      <li>Use professional identity details to keep records, dashboards, and approvals clear.</li>
+    </ul>
+  </aside>
+</section>
+<%- include("../partials/footer") %>

@@ -1,0 +1,1153 @@
+<%
+  const pretty = (value) =>
+    String(value || "")
+      .split("_")
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  const showText = (value) => String(value ?? "").trim() || "-";
+  const joinItems = (items) => (Array.isArray(items) && items.length ? items.join(", ") : "-");
+  const caseLabel = (entry) => (entry.caseNumber ? `Case ${entry.caseNumber}` : "Case pending");
+  const formatAsa = (value) => {
+    const normalized = String(value || "").trim();
+    if (!normalized) {
+      return "-";
+    }
+
+    return normalized.startsWith("asa_")
+      ? `ASA ${normalized.slice(4).toUpperCase()}`
+      : normalized;
+  };
+%>
+<%- include("../partials/header", { title, currentUser, flash }) %>
+
+<section class="panel logbook-hero">
+  <div class="logbook-hero-copy">
+    <p class="eyebrow">Clinical logbook</p>
+    <h1>De-identified anaesthesia case logging for every member of the unit</h1>
+    <p class="section-copy">
+      Record clinical work clearly, keep patient identity out of the system, and review your activity or unit trends when needed.
+    </p>
+    <div class="hero-actions">
+      <button type="button" class="button-link" data-logbook-jump-tab="entries">Open case browser</button>
+      <% if (canReview) { %>
+        <button type="button" class="button-link button-link-secondary" data-logbook-jump-tab="oversight">Open chief/faculty browser</button>
+      <% } %>
+    </div>
+  </div>
+  <div class="callout callout-info">
+    <p class="section-kicker">Privacy</p>
+    <p class="section-copy">
+      Do not enter patient names, hospital numbers, full dates of birth, bed numbers, or any free text that can identify an individual patient. Use only de-identified clinical descriptors.
+    </p>
+  </div>
+</section>
+
+<section class="quick-stat-ribbon">
+  <article class="quick-stat-chip">
+    <span>Cases this period</span>
+    <strong><%= personal.summary.totalCases %></strong>
+  </article>
+  <article class="quick-stat-chip">
+    <span>Direct care</span>
+    <strong><%= personal.summary.directCareCases %></strong>
+  </article>
+  <article class="quick-stat-chip">
+    <span>Domains covered</span>
+    <strong><%= personal.summary.domainCoverage %></strong>
+  </article>
+  <article class="quick-stat-chip">
+    <span>Flagged events</span>
+    <strong><%= personal.summary.complicationCount %></strong>
+  </article>
+</section>
+
+<section class="panel logbook-tab-shell" data-logbook-tabs>
+  <div class="section-header">
+    <div>
+      <p class="section-kicker">Sections</p>
+      <h2>Choose what you want to view</h2>
+    </div>
+  </div>
+
+  <nav class="logbook-tab-nav" aria-label="Logbook sections">
+    <button type="button" class="button-link" data-logbook-tab="capture">
+      <span>Capture case</span>
+      <span class="tab-badge"><%= tabBadges.capture %></span>
+    </button>
+    <button type="button" class="button-link" data-logbook-tab="analysis">
+      <span>My analysis</span>
+      <span class="tab-badge"><%= tabBadges.analysis %></span>
+    </button>
+    <button type="button" class="button-link" data-logbook-tab="entries">
+      <span>Case browser</span>
+      <span class="tab-badge"><%= tabBadges.entries %></span>
+    </button>
+    <% if (canReview) { %>
+      <button type="button" class="button-link" data-logbook-tab="oversight">
+        <span>Unit oversight</span>
+        <span class="tab-badge"><%= tabBadges.oversight %></span>
+      </button>
+    <% } %>
+  </nav>
+
+  <section class="logbook-tab-panel" data-logbook-panel="capture">
+    <div class="section-header">
+      <div>
+        <p class="section-kicker">Capture case</p>
+        <h2>Structured perioperative logbook entry</h2>
+      </div>
+    </div>
+    <p class="helper-text">The capture flow now follows the Unit 3 blueprint closely while still staying de-identified and review-ready.</p>
+    <form action="/logbook" method="post" class="stack-form logbook-entry-form" data-logbook-blueprint-form>
+      <datalist id="surgery-name-suggestions">
+        <% surgeryNameSuggestions.forEach((item) => { %>
+          <option value="<%= item %>"></option>
+        <% }) %>
+      </datalist>
+
+      <div class="callout compact-callout">
+        <p class="section-kicker">Blueprint notes</p>
+        <p class="section-copy">
+          Each saved entry gets a user-specific case number automatically. The anaesthesia unit is fixed to Unit 3 for now, and surgery names stay free text with suggestions from previously logged cases.
+        </p>
+      </div>
+
+      <fieldset class="form-section-card">
+        <legend>Case overview</legend>
+        <div class="fieldset-body">
+          <div class="logbook-form-grid">
+            <label><span>Date</span><input type="date" name="activityDate" required value="<%= personal.range.end %>" /></label>
+            <label>
+              <span>Case type</span>
+              <select name="caseType" required>
+                <% entryOptions.caseTypes.forEach((option) => { %>
+                  <option value="<%= option %>"><%= option %></option>
+                <% }) %>
+              </select>
+            </label>
+            <label>
+              <span>Anaesthesia unit</span>
+              <input type="text" value="<%= entryOptions.fixedAnaesthesiaUnit %>" readonly />
+            </label>
+            <label><span>OT number</span><input type="text" name="otNumber" placeholder="OT-5" /></label>
+            <label>
+              <span>Surgical department</span>
+              <select name="surgicalDepartment" required>
+                <option value="">Choose department</option>
+                <% entryOptions.surgicalDepartments.forEach((option) => { %>
+                  <option value="<%= option %>"><%= option %></option>
+                <% }) %>
+              </select>
+            </label>
+            <label>
+              <span>Surgery name</span>
+              <input type="text" name="surgeryName" list="surgery-name-suggestions" placeholder="Start typing to see recent suggestions" required />
+            </label>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="form-section-card">
+        <legend>Timing and demographics</legend>
+        <div class="fieldset-body">
+          <div class="logbook-form-grid">
+            <label><span>Starting time</span><input type="time" name="surgeryStartTime" required data-logbook-start-time /></label>
+            <label><span>Ending time</span><input type="time" name="surgeryEndTime" required data-logbook-end-time /></label>
+            <div class="inline-helper-card">
+              <strong>Duration</strong>
+              <p class="meta-text" data-logbook-duration-label>Auto-calculated when start and end time are entered.</p>
+            </div>
+            <label><span>Age (years)</span><input type="number" name="ageYears" min="0" max="120" step="1" required /></label>
+            <label>
+              <span>Gender</span>
+              <select name="gender" required>
+                <option value="">Choose gender</option>
+                <% entryOptions.genders.forEach((option) => { %>
+                  <option value="<%= option %>"><%= option %></option>
+                <% }) %>
+              </select>
+            </label>
+            <label>
+              <span>ASA physical status</span>
+              <select name="asaPhysicalStatus" required>
+                <option value="">Choose ASA</option>
+                <% entryOptions.asaPhysicalStatuses.forEach((option) => { %>
+                  <option value="<%= option %>"><%= option %></option>
+                <% }) %>
+              </select>
+            </label>
+            <label><span>BMI</span><input type="number" name="bmi" min="0" max="100" step="0.1" placeholder="24.6" /></label>
+          </div>
+
+          <div class="checkbox-section">
+            <p class="section-kicker">Comorbidities</p>
+            <div class="checkbox-grid">
+              <% entryOptions.comorbidities.forEach((option) => { %>
+                <label class="checkbox-card">
+                  <input
+                    type="checkbox"
+                    name="comorbidities"
+                    value="<%= option %>"
+                    <%= option === "Others - Specify" ? "data-logbook-other-comorbidity-toggle" : "" %>
+                  />
+                  <span><%= option %></span>
+                </label>
+              <% }) %>
+            </div>
+            <label data-logbook-other-comorbidity-row hidden>
+              <span>Other comorbidity details</span>
+              <input type="text" name="otherComorbidity" placeholder="Only if Others - Specify is selected" />
+            </label>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="form-section-card">
+        <legend>Anaesthesia and procedures</legend>
+        <div class="fieldset-body">
+          <div class="logbook-form-grid">
+            <label>
+              <span>Supervision level</span>
+              <select name="supervisionLevel" required>
+                <option value="">Choose supervision</option>
+                <% entryOptions.supervisionLevels.forEach((option) => { %>
+                  <option value="<%= option %>"><%= option %></option>
+                <% }) %>
+              </select>
+            </label>
+            <label>
+              <span>Anaesthetic planned</span>
+              <select name="anaestheticPlanned" required data-logbook-anaesthetic-plan>
+                <option value="">Choose plan</option>
+                <% entryOptions.anaestheticPlans.forEach((option) => { %>
+                  <option value="<%= option %>"><%= option %></option>
+                <% }) %>
+              </select>
+            </label>
+            <label data-logbook-airway-wrapper hidden>
+              <span>Airway management if GA</span>
+              <select name="airwayManagement" data-logbook-airway-select>
+                <option value="">Choose airway management</option>
+                <% entryOptions.airwayManagements.forEach((option) => { %>
+                  <option value="<%= option %>"><%= option %></option>
+                <% }) %>
+              </select>
+            </label>
+            <label data-logbook-scopy-wrapper hidden>
+              <span>Scopy technique if ETT</span>
+              <select name="scopyTechnique" data-logbook-scopy-select>
+                <option value="">Choose technique</option>
+                <% entryOptions.scopyTechniques.forEach((option) => { %>
+                  <option value="<%= option %>"><%= option %></option>
+                <% }) %>
+              </select>
+            </label>
+          </div>
+
+          <div class="checkbox-section">
+            <p class="section-kicker">Procedures</p>
+            <div class="checkbox-grid">
+              <% entryOptions.procedures.forEach((option) => { %>
+                <label class="checkbox-card">
+                  <input type="checkbox" name="procedures" value="<%= option %>" />
+                  <span><%= option %></span>
+                </label>
+              <% }) %>
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="form-section-card">
+        <legend>Analgesia and outcome</legend>
+        <div class="fieldset-body">
+          <div class="checkbox-section">
+            <p class="section-kicker">Analgesia</p>
+            <div class="checkbox-grid">
+              <% entryOptions.fixedAnalgesiaOptions.forEach((option) => { %>
+                <label class="checkbox-card">
+                  <input type="checkbox" name="analgesiaOptions" value="<%= option %>" />
+                  <span><%= option %></span>
+                </label>
+              <% }) %>
+            </div>
+          </div>
+
+          <div class="repeatable-shell" data-repeatable-list-root>
+            <div class="repeatable-shell-head">
+              <p class="section-kicker">Block catheters</p>
+              <button type="button" class="button-link button-link-secondary" data-repeatable-add data-repeatable-target="block-catheter-list">Add catheter</button>
+            </div>
+            <div
+              class="repeatable-list"
+              id="block-catheter-list"
+              data-repeatable-list
+              data-repeatable-label="Block catheter name"
+              data-repeatable-input-name="blockCatheterNames"
+              data-repeatable-placeholder="e.g. Continuous femoral catheter"
+            >
+              <div class="repeatable-row">
+                <label>
+                  <span>Block catheter name</span>
+                  <input type="text" name="blockCatheterNames" placeholder="e.g. Continuous femoral catheter" />
+                </label>
+                <button type="button" class="button-link button-link-secondary repeatable-remove" data-repeatable-remove>Remove</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="repeatable-shell" data-repeatable-list-root>
+            <div class="repeatable-shell-head">
+              <p class="section-kicker">Single shot blocks</p>
+              <button type="button" class="button-link button-link-secondary" data-repeatable-add data-repeatable-target="single-shot-list">Add block</button>
+            </div>
+            <div
+              class="repeatable-list"
+              id="single-shot-list"
+              data-repeatable-list
+              data-repeatable-label="Single shot block name"
+              data-repeatable-input-name="singleShotBlockNames"
+              data-repeatable-placeholder="e.g. TAP block"
+            >
+              <div class="repeatable-row">
+                <label>
+                  <span>Single shot block name</span>
+                  <input type="text" name="singleShotBlockNames" placeholder="e.g. TAP block" />
+                </label>
+                <button type="button" class="button-link button-link-secondary repeatable-remove" data-repeatable-remove>Remove</button>
+              </div>
+            </div>
+          </div>
+
+          <label><span>Intra operative events</span><textarea name="intraoperativeEvents" rows="4" placeholder="Free text for significant events, problems, or important intraoperative issues."></textarea></label>
+
+          <div class="checkbox-section">
+            <p class="section-kicker">Post operative care</p>
+            <div class="checkbox-grid">
+              <% entryOptions.postOperativeCareOptions.forEach((option) => { %>
+                <label class="checkbox-card">
+                  <input type="checkbox" name="postOperativeCare" value="<%= option %>" />
+                  <span><%= option %></span>
+                </label>
+              <% }) %>
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="form-section-card">
+        <legend>Learning points</legend>
+        <div class="fieldset-body">
+          <div class="callout callout-info compact-callout">
+            <p class="section-copy">At least one short learning point is mandatory for every saved case so the logbook captures what was learned, not only what was done.</p>
+          </div>
+          <div class="repeatable-shell" data-repeatable-list-root>
+            <div class="repeatable-shell-head">
+              <p class="section-kicker">Bullet entries</p>
+              <button type="button" class="button-link button-link-secondary" data-repeatable-add data-repeatable-target="learning-point-list">Add point</button>
+            </div>
+            <div
+              class="repeatable-list"
+              id="learning-point-list"
+              data-repeatable-list
+              data-repeatable-label="Learning point"
+              data-repeatable-input-name="learningPoints"
+              data-repeatable-placeholder="Short bullet entry"
+              data-repeatable-required="true"
+            >
+              <div class="repeatable-row">
+                <label>
+                  <span>Learning point 1</span>
+                  <input type="text" name="learningPoints" required placeholder="Short bullet entry" />
+                </label>
+                <button type="button" class="button-link button-link-secondary repeatable-remove" data-repeatable-remove>Remove</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="logbook-form-actions">
+        <button type="submit">Save logbook entry</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="logbook-tab-panel" data-logbook-panel="analysis">
+    <div class="section-header">
+      <div>
+        <p class="section-kicker">My analysis</p>
+        <h2>Personal period summary</h2>
+      </div>
+      <a class="button-link button-link-secondary" href="<%= personal.printHref %>" target="_blank" rel="noreferrer">Print summary</a>
+    </div>
+    <form action="/logbook" method="get" class="inline-form compact-form filter-bar">
+      <label><span>Start</span><input type="date" name="periodStart" value="<%= personal.range.start %>" required /></label>
+      <label><span>End</span><input type="date" name="periodEnd" value="<%= personal.range.end %>" required /></label>
+      <button type="submit">Refresh analysis</button>
+    </form>
+
+    <div class="stat-grid logbook-stat-grid">
+      <article class="stat-card">
+        <span>Total cases</span>
+        <strong><%= personal.summary.totalCases %></strong>
+      </article>
+      <article class="stat-card">
+        <span>Direct performance</span>
+        <strong><%= personal.summary.directCareCases %></strong>
+      </article>
+      <article class="stat-card">
+        <span>Clinical domains</span>
+        <strong><%= personal.summary.domainCoverage %></strong>
+      </article>
+      <article class="stat-card">
+        <span>Flagged events</span>
+        <strong><%= personal.summary.complicationCount %></strong>
+      </article>
+    </div>
+
+    <div class="callout">
+      <p class="section-kicker">Narrative analysis</p>
+      <p class="section-copy"><%= personal.summary.analysisNarrative %></p>
+    </div>
+
+    <div class="progression-board">
+      <article class="progression-card">
+        <span class="status-pill status-approved"><%= pretty(personal.summary.progression.stage) %> progression</span>
+        <h3>Training signal</h3>
+        <p class="section-copy">
+          Direct care ratio: <strong><%= personal.summary.progression.directCareRatio %>%</strong> ·
+          Emergency cases: <strong><%= personal.summary.progression.emergencyCases %></strong> ·
+          Complex cases: <strong><%= personal.summary.progression.complexCases %></strong>
+        </p>
+      </article>
+      <article class="progression-card">
+        <h3>Strengths showing</h3>
+        <% if (!personal.summary.progression.strengths.length) { %>
+          <p class="meta-text">More logged work is needed before strengths can be inferred confidently.</p>
+        <% } %>
+        <% personal.summary.progression.strengths.forEach((item) => { %>
+          <p class="signal-line signal-line-positive"><%= item %></p>
+        <% }) %>
+      </article>
+      <article class="progression-card">
+        <h3>Watch points</h3>
+        <% if (!personal.summary.progression.watchPoints.length) { %>
+          <p class="signal-line signal-line-neutral">No major watch points surfaced for this period.</p>
+        <% } %>
+        <% personal.summary.progression.watchPoints.forEach((item) => { %>
+          <p class="signal-line signal-line-warning"><%= item %></p>
+        <% }) %>
+      </article>
+    </div>
+
+    <div class="metrics-board">
+      <article class="metric-cluster">
+        <h3>Domain mix</h3>
+        <% if (!personal.summary.domainMix.length) { %>
+          <p class="meta-text">No entries in the selected period yet.</p>
+        <% } %>
+        <% personal.summary.domainMix.forEach((item) => { %>
+          <div class="metric-row"><span><%= pretty(item.label) %></span><strong><%= item.count %></strong></div>
+        <% }) %>
+      </article>
+      <article class="metric-cluster">
+        <h3>Procedure category mix</h3>
+        <% personal.summary.procedureCategoryMix.forEach((item) => { %>
+          <div class="metric-row"><span><%= pretty(item.label) %></span><strong><%= item.count %></strong></div>
+        <% }) %>
+      </article>
+      <article class="metric-cluster">
+        <h3>Supervision mix</h3>
+        <% personal.summary.supervisionMix.forEach((item) => { %>
+          <div class="metric-row"><span><%= pretty(item.label) %></span><strong><%= item.count %></strong></div>
+        <% }) %>
+      </article>
+    </div>
+
+    <div class="callout">
+      <p class="section-kicker">Weekly report submission</p>
+      <form action="/reviews/submit" method="post" class="inline-form compact-form filter-bar weekly-report-form">
+        <label><span>Week start</span><input type="date" name="weekStartDate" required value="<%= personal.weeklySuggestion.start %>" /></label>
+        <label><span>Week end</span><input type="date" name="weekEndDate" required value="<%= personal.weeklySuggestion.end %>" /></label>
+        <button type="submit">Submit weekly report</button>
+        <a class="button-link button-link-secondary" href="/logbook/print?mode=personal&periodStart=<%= personal.weeklySuggestion.start %>&periodEnd=<%= personal.weeklySuggestion.end %>" target="_blank" rel="noreferrer">Print this week</a>
+      </form>
+    </div>
+  </section>
+
+  <section class="logbook-tab-panel" data-logbook-panel="entries">
+    <div class="section-header">
+      <div>
+        <p class="section-kicker">Case browser</p>
+        <h2>Browse your structured case record</h2>
+      </div>
+    </div>
+    <div class="logbook-browser-shell">
+      <div class="logbook-browser-hero">
+        <div>
+          <p class="section-kicker">Personal record</p>
+          <h3>Search, filter, and expand your case story</h3>
+          <p class="section-copy">
+            Showing entries from <strong><%= personal.range.start %></strong> to <strong><%= personal.range.end %></strong>. Change the analysis dates to widen or narrow the browser window.
+          </p>
+        </div>
+        <div class="logbook-browser-stat-ribbon">
+          <article class="logbook-browser-stat"><span>Shown</span><strong><%= personal.browseSummary.visibleCases %></strong></article>
+          <article class="logbook-browser-stat"><span>Emergency</span><strong><%= personal.browseSummary.emergencyCases %></strong></article>
+          <article class="logbook-browser-stat"><span>Complex</span><strong><%= personal.browseSummary.complexCases %></strong></article>
+          <article class="logbook-browser-stat"><span>Flagged</span><strong><%= personal.browseSummary.flaggedCases %></strong></article>
+        </div>
+      </div>
+      <form action="/logbook" method="get" class="logbook-browser-filter-bar">
+        <input type="hidden" name="periodStart" value="<%= personal.range.start %>" />
+        <input type="hidden" name="periodEnd" value="<%= personal.range.end %>" />
+        <% if (canReview) { %>
+          <input type="hidden" name="teamView" value="<%= team.view %>" />
+          <input type="hidden" name="memberId" value="<%= team.selectedMemberId %>" />
+          <input type="hidden" name="memberPeriodStart" value="<%= team.range.start %>" />
+          <input type="hidden" name="memberPeriodEnd" value="<%= team.range.end %>" />
+        <% } %>
+        <label><span>Search</span><input type="search" name="entrySearch" value="<%= personal.browseFilters.searchText %>" placeholder="Surgery, OT, case #, airway..." /></label>
+        <label>
+          <span>Case type</span>
+          <select name="entryCaseType">
+            <option value="">All case types</option>
+            <% entryOptions.caseTypes.forEach((option) => { %>
+              <option value="<%= option %>" <%= personal.browseFilters.caseType === option ? "selected" : "" %>><%= option %></option>
+            <% }) %>
+          </select>
+        </label>
+        <label>
+          <span>Department</span>
+          <select name="entryDepartment">
+            <option value="">All departments</option>
+            <% entryOptions.surgicalDepartments.forEach((option) => { %>
+              <option value="<%= option %>" <%= personal.browseFilters.surgicalDepartment === option ? "selected" : "" %>><%= option %></option>
+            <% }) %>
+          </select>
+        </label>
+        <label class="logbook-browser-toggle">
+          <input type="checkbox" name="entryFlagged" value="true" <%= personal.browseFilters.flaggedOnly ? "checked" : "" %> />
+          <span>Flagged only</span>
+        </label>
+        <button type="submit">Browse cases</button>
+        <a class="button-link button-link-secondary" href="/logbook?periodStart=<%= personal.range.start %>&periodEnd=<%= personal.range.end %>">Clear filters</a>
+      </form>
+    </div>
+    <% if (!personal.entries.length) { %>
+      <div class="empty-state">No logbook entries match this browser view yet.</div>
+    <% } %>
+    <div class="logbook-browser-results">
+      <% personal.entries.forEach((entry) => { %>
+        <article class="list-card logbook-entry-card">
+          <div class="logbook-entry-head">
+            <div>
+              <p class="section-kicker"><%= caseLabel(entry) %></p>
+              <strong><%= entry.procedureName %></strong>
+            </div>
+            <div class="tag-row">
+              <span class="pill"><%= entry.activityDate %></span>
+              <span class="pill"><%= entry.caseType %></span>
+              <span class="pill"><%= showText(entry.anaestheticPlanned || pretty(entry.anaesthesiaTechnique)) %></span>
+            </div>
+          </div>
+          <div class="logbook-card-actions">
+          <button
+            type="button"
+            class="button-link button-link-secondary logbook-view-case-button"
+            data-logbook-case-view
+            data-case-owner="My logbook"
+            data-case-number="<%= caseLabel(entry) %>"
+            data-case-title="<%= entry.procedureName %>"
+            data-case-date="<%= entry.activityDate %>"
+            data-case-type="<%= entry.caseType %>"
+            data-case-department="<%= showText(entry.surgicalDepartment) %>"
+            data-case-ot="<%= showText(entry.otNumber) %>"
+            data-case-age="<%= showText(entry.ageYears) %>"
+            data-case-gender="<%= showText(entry.gender) %>"
+            data-case-asa="<%= formatAsa(entry.asaPhysicalStatus) %>"
+            data-case-bmi="<%= entry.bmi ?? '-' %>"
+            data-case-time="<%= showText(entry.surgeryStartTime) %> to <%= showText(entry.surgeryEndTime) %>"
+            data-case-duration="<%= entry.durationMinutes ? `${entry.durationMinutes} minutes` : '-' %>"
+            data-case-plan="<%= showText(entry.anaestheticPlanned || pretty(entry.anaesthesiaTechnique)) %>"
+            data-case-supervision="<%= showText(entry.supervisionLevel) %>"
+            data-case-airway="<%= showText(entry.airwayManagement) %>"
+            data-case-scopy="<%= showText(entry.scopyTechnique) %>"
+            data-case-postop="<%= joinItems(entry.postOperativeCare) %>"
+            data-case-comorbidities="<%= joinItems(entry.comorbidities) %>"
+            data-case-procedures="<%= joinItems(entry.procedures) %>"
+            data-case-analgesia="<%= joinItems(entry.analgesiaItems) %>"
+            data-case-events="<%= entry.hadComplication ? entry.complicationSummary : '-' %>"
+            data-case-learning="<%= joinItems(entry.learningPoints) %>"
+          >View case</button>
+          <a class="button-link button-link-secondary logbook-print-case-button" href="/logbook/print/case/<%= entry.id %>" target="_blank" rel="noreferrer">Print case</a>
+          </div>
+          <div class="tag-row">
+            <span class="pill"><%= showText(entry.surgicalDepartment) %></span>
+            <span class="pill"><%= showText(entry.supervisionLevel) %></span>
+            <% if (entry.postOperativeCare.length) { %>
+              <span class="pill"><%= joinItems(entry.postOperativeCare) %></span>
+            <% } %>
+          </div>
+          <p class="meta-text">
+            <%= pretty(entry.specialtyArea) %> · <%= pretty(entry.location) %> · <%= pretty(entry.urgency) %> · <%= pretty(entry.patientAgeBand) %> · <%= pretty(entry.asaPhysicalStatus) %>
+          </p>
+          <% if (entry.durationMinutes) { %>
+            <p class="meta-text">Duration: <%= entry.durationMinutes %> minutes</p>
+          <% } %>
+          <p class="meta-text">
+            OT: <%= showText(entry.otNumber) %> | Age: <%= showText(entry.ageYears) %> | Gender: <%= showText(entry.gender) %> | <%= formatAsa(entry.asaPhysicalStatus) %> | BMI: <%= entry.bmi ?? "-" %>
+          </p>
+          <p class="meta-text">
+            Time: <%= showText(entry.surgeryStartTime) %> to <%= showText(entry.surgeryEndTime) %> | Anaesthesia: <%= showText(entry.anaestheticPlanned || pretty(entry.anaesthesiaTechnique)) %>
+          </p>
+          <% if (entry.airwayManagement || entry.scopyTechnique) { %>
+            <p class="meta-text">
+              Airway: <%= showText(entry.airwayManagement) %>
+              <% if (entry.scopyTechnique) { %>
+                | Scopy: <%= showText(entry.scopyTechnique) %>
+              <% } %>
+            </p>
+          <% } %>
+          <p class="meta-text">Comorbidities: <%= joinItems(entry.comorbidities) %></p>
+          <p class="meta-text">Procedures: <%= joinItems(entry.procedures) %></p>
+          <p class="meta-text">Analgesia: <%= joinItems(entry.analgesiaItems) %></p>
+          <% if (entry.hadComplication) { %>
+            <p class="status-callout status-returned">Intra operative events: <%= entry.complicationSummary %></p>
+          <% } %>
+          <% if (entry.learningPoints.length) { %>
+            <div class="logbook-learning-block">
+              <p class="section-kicker">Learning points</p>
+              <ul class="logbook-bullet-list">
+                <% entry.learningPoints.forEach((point) => { %>
+                  <li><%= point %></li>
+                <% }) %>
+              </ul>
+            </div>
+          <% } %>
+        </article>
+      <% }) %>
+    </div>
+  </section>
+
+  <% if (canReview) { %>
+    <section class="logbook-tab-panel" data-logbook-panel="oversight">
+      <div class="section-header">
+        <div>
+          <p class="section-kicker">Unit oversight</p>
+          <h2>Chief and faculty review</h2>
+        </div>
+        <% if (team.view === "individual" && team.printHref) { %>
+          <a class="button-link button-link-secondary" href="<%= team.printHref %>" target="_blank" rel="noreferrer">Print individual report</a>
+        <% } %>
+      </div>
+
+      <form action="/logbook" method="get" class="stack-form" data-team-view-form>
+        <div class="segmented-toggle" role="tablist" aria-label="Team review mode">
+          <label class="segmented-toggle-option">
+            <input type="radio" name="teamView" value="individual" <%= team.view === "individual" ? "checked" : "" %> />
+            <span>Selected person</span>
+          </label>
+          <label class="segmented-toggle-option">
+            <input type="radio" name="teamView" value="overview" <%= team.view === "overview" ? "checked" : "" %> />
+            <span>Overview board</span>
+          </label>
+        </div>
+        <div class="logbook-form-grid">
+          <% if (team.view === "individual") { %>
+            <label>
+              <span>Unit member</span>
+              <select name="memberId" required>
+                <% team.members.forEach((member) => { %>
+                  <option value="<%= member.id %>" <%= member.id === team.selectedMemberId ? "selected" : "" %>>
+                    <%= member.displayName %> · <%= pretty(member.role) %> · <%= pretty(member.status) %>
+                  </option>
+                <% }) %>
+              </select>
+            </label>
+          <% } else { %>
+            <div class="callout callout-info compact-callout">
+              <p class="section-kicker">Overview mode</p>
+              <p class="section-copy">Compare all active unit members on one screen for the selected period.</p>
+            </div>
+          <% } %>
+          <label><span>Start</span><input type="date" name="memberPeriodStart" value="<%= team.range.start %>" required /></label>
+          <label><span>End</span><input type="date" name="memberPeriodEnd" value="<%= team.range.end %>" required /></label>
+        </div>
+        <div class="logbook-form-actions">
+          <button type="submit"><%= team.view === "overview" ? "Load overview board" : "Load individual report" %></button>
+        </div>
+      </form>
+
+      <% if (team.view === "individual" && team.summary) { %>
+        <div class="stat-grid logbook-stat-grid">
+          <article class="stat-card">
+            <span>Cases</span>
+            <strong><%= team.summary.totalCases %></strong>
+          </article>
+          <article class="stat-card">
+            <span>Direct performance</span>
+            <strong><%= team.summary.directCareCases %></strong>
+          </article>
+          <article class="stat-card">
+            <span>Domains covered</span>
+            <strong><%= team.summary.domainCoverage %></strong>
+          </article>
+          <article class="stat-card">
+            <span>Flagged events</span>
+            <strong><%= team.summary.complicationCount %></strong>
+          </article>
+        </div>
+
+        <div class="callout">
+          <p class="section-kicker">Analysis for <%= team.summary.userName %></p>
+          <p class="section-copy"><%= team.summary.analysisNarrative %></p>
+        </div>
+
+        <div class="progression-board">
+          <article class="progression-card">
+            <span class="status-pill status-approved"><%= pretty(team.summary.progression.stage) %> progression</span>
+            <h3>Supervisor signal</h3>
+            <p class="section-copy">
+              Direct care ratio: <strong><%= team.summary.progression.directCareRatio %>%</strong> ·
+              Independent with review: <strong><%= team.summary.progression.independentCases %></strong> ·
+              Emergency cases: <strong><%= team.summary.progression.emergencyCases %></strong>
+            </p>
+          </article>
+          <article class="progression-card">
+            <h3>Visible strengths</h3>
+            <% if (!team.summary.progression.strengths.length) { %>
+              <p class="meta-text">No clear strengths surfaced yet from this period.</p>
+            <% } %>
+            <% team.summary.progression.strengths.forEach((item) => { %>
+              <p class="signal-line signal-line-positive"><%= item %></p>
+            <% }) %>
+          </article>
+          <article class="progression-card">
+            <h3>Supervisor watch points</h3>
+            <% if (!team.summary.progression.watchPoints.length) { %>
+              <p class="signal-line signal-line-neutral">No major watch points surfaced for this period.</p>
+            <% } %>
+            <% team.summary.progression.watchPoints.forEach((item) => { %>
+              <p class="signal-line signal-line-warning"><%= item %></p>
+            <% }) %>
+          </article>
+        </div>
+
+        <div class="metrics-board">
+          <article class="metric-cluster">
+            <h3>Procedure category mix</h3>
+            <% team.summary.procedureCategoryMix.forEach((item) => { %>
+              <div class="metric-row"><span><%= pretty(item.label) %></span><strong><%= item.count %></strong></div>
+            <% }) %>
+          </article>
+          <article class="metric-cluster">
+            <h3>Urgency mix</h3>
+            <% team.summary.urgencyMix.forEach((item) => { %>
+              <div class="metric-row"><span><%= pretty(item.label) %></span><strong><%= item.count %></strong></div>
+            <% }) %>
+          </article>
+          <article class="metric-cluster">
+            <h3>Complexity mix</h3>
+            <% team.summary.complexityMix.forEach((item) => { %>
+              <div class="metric-row"><span><%= pretty(item.label) %></span><strong><%= item.count %></strong></div>
+            <% }) %>
+          </article>
+        </div>
+
+        <section class="logbook-browser-shell">
+          <div class="logbook-browser-hero">
+            <div>
+              <p class="section-kicker">Reviewer case browser</p>
+              <h3>Inspect <%= team.summary.userName %>'s cases in context</h3>
+              <p class="section-copy">
+                Filter the selected person's entries for the current review window before printing or discussing the case mix.
+              </p>
+            </div>
+            <div class="logbook-browser-stat-ribbon">
+              <article class="logbook-browser-stat"><span>Shown</span><strong><%= team.browseSummary.visibleCases %></strong></article>
+              <article class="logbook-browser-stat"><span>Emergency</span><strong><%= team.browseSummary.emergencyCases %></strong></article>
+              <article class="logbook-browser-stat"><span>Complex</span><strong><%= team.browseSummary.complexCases %></strong></article>
+              <article class="logbook-browser-stat"><span>Flagged</span><strong><%= team.browseSummary.flaggedCases %></strong></article>
+            </div>
+          </div>
+          <form action="/logbook" method="get" class="logbook-browser-filter-bar">
+            <input type="hidden" name="periodStart" value="<%= personal.range.start %>" />
+            <input type="hidden" name="periodEnd" value="<%= personal.range.end %>" />
+            <input type="hidden" name="entrySearch" value="<%= personal.browseFilters.searchText %>" />
+            <input type="hidden" name="entryCaseType" value="<%= personal.browseFilters.caseType %>" />
+            <input type="hidden" name="entryDepartment" value="<%= personal.browseFilters.surgicalDepartment %>" />
+            <% if (personal.browseFilters.flaggedOnly) { %>
+              <input type="hidden" name="entryFlagged" value="true" />
+            <% } %>
+            <input type="hidden" name="teamView" value="individual" />
+            <input type="hidden" name="memberId" value="<%= team.selectedMemberId %>" />
+            <input type="hidden" name="memberPeriodStart" value="<%= team.range.start %>" />
+            <input type="hidden" name="memberPeriodEnd" value="<%= team.range.end %>" />
+            <label><span>Search</span><input type="search" name="teamEntrySearch" value="<%= team.browseFilters.searchText %>" placeholder="Name, surgery, OT, case #..." /></label>
+            <label>
+              <span>Case type</span>
+              <select name="teamEntryCaseType">
+                <option value="">All case types</option>
+                <% entryOptions.caseTypes.forEach((option) => { %>
+                  <option value="<%= option %>" <%= team.browseFilters.caseType === option ? "selected" : "" %>><%= option %></option>
+                <% }) %>
+              </select>
+            </label>
+            <label>
+              <span>Department</span>
+              <select name="teamEntryDepartment">
+                <option value="">All departments</option>
+                <% entryOptions.surgicalDepartments.forEach((option) => { %>
+                  <option value="<%= option %>" <%= team.browseFilters.surgicalDepartment === option ? "selected" : "" %>><%= option %></option>
+                <% }) %>
+              </select>
+            </label>
+            <label class="logbook-browser-toggle">
+              <input type="checkbox" name="teamEntryFlagged" value="true" <%= team.browseFilters.flaggedOnly ? "checked" : "" %> />
+              <span>Flagged only</span>
+            </label>
+            <button type="submit">Browse review cases</button>
+          </form>
+        </section>
+
+        <section class="logbook-review-grid">
+          <article class="panel panel-nested">
+            <p class="section-kicker">Filtered cases in range</p>
+            <% if (!team.browseEntries.length) { %>
+              <div class="empty-state">No entries match the current reviewer browser filters.</div>
+            <% } %>
+            <% team.browseEntries.forEach((entry) => { %>
+              <article class="list-card compact-card logbook-entry-card">
+                <div class="logbook-entry-head">
+                  <div>
+                    <p class="section-kicker"><%= caseLabel(entry) %></p>
+                    <strong><%= entry.procedureName %></strong>
+                  </div>
+                  <span class="pill"><%= entry.activityDate %></span>
+                </div>
+                <div class="logbook-card-actions">
+                <button
+                  type="button"
+                  class="button-link button-link-secondary logbook-view-case-button"
+                  data-logbook-case-view
+                  data-case-owner="<%= team.summary.userName %>"
+                  data-case-number="<%= caseLabel(entry) %>"
+                  data-case-title="<%= entry.procedureName %>"
+                  data-case-date="<%= entry.activityDate %>"
+                  data-case-type="<%= entry.caseType %>"
+                  data-case-department="<%= showText(entry.surgicalDepartment) %>"
+                  data-case-ot="<%= showText(entry.otNumber) %>"
+                  data-case-age="<%= showText(entry.ageYears) %>"
+                  data-case-gender="<%= showText(entry.gender) %>"
+                  data-case-asa="<%= formatAsa(entry.asaPhysicalStatus) %>"
+                  data-case-bmi="<%= entry.bmi ?? '-' %>"
+                  data-case-time="<%= showText(entry.surgeryStartTime) %> to <%= showText(entry.surgeryEndTime) %>"
+                  data-case-duration="<%= entry.durationMinutes ? `${entry.durationMinutes} minutes` : '-' %>"
+                  data-case-plan="<%= showText(entry.anaestheticPlanned || pretty(entry.anaesthesiaTechnique)) %>"
+                  data-case-supervision="<%= showText(entry.supervisionLevel) %>"
+                  data-case-airway="<%= showText(entry.airwayManagement) %>"
+                  data-case-scopy="<%= showText(entry.scopyTechnique) %>"
+                  data-case-postop="<%= joinItems(entry.postOperativeCare) %>"
+                  data-case-comorbidities="<%= joinItems(entry.comorbidities) %>"
+                  data-case-procedures="<%= joinItems(entry.procedures) %>"
+                  data-case-analgesia="<%= joinItems(entry.analgesiaItems) %>"
+                  data-case-events="<%= entry.hadComplication ? entry.complicationSummary : '-' %>"
+                  data-case-learning="<%= joinItems(entry.learningPoints) %>"
+                >View case</button>
+                <a class="button-link button-link-secondary logbook-print-case-button" href="/logbook/print/case/<%= entry.id %>" target="_blank" rel="noreferrer">Print case</a>
+                </div>
+                <div class="tag-row">
+                  <span class="pill"><%= entry.caseType %></span>
+                  <span class="pill"><%= showText(entry.surgicalDepartment) %></span>
+                  <span class="pill"><%= showText(entry.supervisionLevel) %></span>
+                </div>
+                <p class="meta-text"><%= pretty(entry.specialtyArea) %> · <%= pretty(entry.location) %> · <%= pretty(entry.complexityLevel) %></p>
+                <p class="meta-text">
+                  OT: <%= showText(entry.otNumber) %> | Age: <%= showText(entry.ageYears) %> | <%= formatAsa(entry.asaPhysicalStatus) %> | Plan: <%= showText(entry.anaestheticPlanned || pretty(entry.anaesthesiaTechnique)) %>
+                </p>
+                <p class="meta-text">Post op care: <%= joinItems(entry.postOperativeCare) %></p>
+                <% if (entry.learningPoints.length) { %>
+                  <p class="meta-text">Learning: <%= joinItems(entry.learningPoints) %></p>
+                <% } %>
+              </article>
+            <% }) %>
+          </article>
+          <article class="panel panel-nested">
+            <p class="section-kicker">Reflection highlights</p>
+            <% if (!team.summary.reflectionHighlights.length) { %>
+              <div class="empty-state">No reflection notes were recorded for this period.</div>
+            <% } %>
+            <% team.summary.reflectionHighlights.forEach((item) => { %>
+              <article class="list-card compact-card">
+                <p><%= item %></p>
+              </article>
+            <% }) %>
+          </article>
+        </section>
+      <% } %>
+
+      <% if (team.view === "overview" && team.overviewSnapshot) { %>
+        <div class="stat-grid logbook-stat-grid">
+          <article class="stat-card">
+            <span>Members in unit</span>
+            <strong><%= team.overviewSnapshot.totalMembers %></strong>
+          </article>
+          <article class="stat-card">
+            <span>Members with cases</span>
+            <strong><%= team.overviewSnapshot.membersWithCases %></strong>
+          </article>
+          <article class="stat-card">
+            <span>Total cases in period</span>
+            <strong><%= team.overviewSnapshot.totalCases %></strong>
+          </article>
+          <article class="stat-card">
+            <span>Average cases per member</span>
+            <strong><%= team.overviewSnapshot.averageCases %></strong>
+          </article>
+        </div>
+
+        <div class="callout">
+          <p class="section-kicker">Overview board</p>
+          <p class="section-copy">
+            This comparison board helps chief and faculty scan volume, breadth, complexity, and watch-point signals across the unit for one shared reporting window.
+          </p>
+        </div>
+
+        <section class="overview-board">
+          <% team.overviewMembers.forEach((member) => { %>
+            <article class="overview-card">
+              <div class="overview-card-top">
+                <div>
+                  <strong><%= member.userName %></strong>
+                  <p class="meta-text"><%= member.designation %> · <%= member.roleLabel %></p>
+                </div>
+                <span class="status-pill status-approved"><%= pretty(member.stage) %></span>
+              </div>
+              <div class="overview-metrics">
+                <div class="overview-metric"><span>Cases</span><strong><%= member.totalCases %></strong></div>
+                <div class="overview-metric"><span>Direct care</span><strong><%= member.directCareRatio %>%</strong></div>
+                <div class="overview-metric"><span>Domains</span><strong><%= member.domainCoverage %></strong></div>
+                <div class="overview-metric"><span>Complex</span><strong><%= member.complexCases %></strong></div>
+                <div class="overview-metric"><span>Emergency</span><strong><%= member.emergencyCases %></strong></div>
+                <div class="overview-metric"><span>Flags</span><strong><%= member.flaggedEvents %></strong></div>
+              </div>
+              <p class="meta-text">Top domain: <%= member.topDomain %></p>
+            </article>
+          <% }) %>
+        </section>
+
+        <section class="logbook-browser-shell">
+          <div class="logbook-browser-hero">
+            <div>
+              <p class="section-kicker">Unit-wide case browser</p>
+              <h3>Scan cases across the whole unit</h3>
+              <p class="section-copy">
+                Built for chiefs and faculty to quickly identify volume, complexity, emergency exposure, and flagged events across learners.
+              </p>
+            </div>
+            <div class="logbook-browser-stat-ribbon">
+              <article class="logbook-browser-stat"><span>Shown</span><strong><%= team.unitBrowseSummary.visibleCases %></strong></article>
+              <article class="logbook-browser-stat"><span>People</span><strong><%= team.unitBrowseSummary.peopleVisible %></strong></article>
+              <article class="logbook-browser-stat"><span>Complex</span><strong><%= team.unitBrowseSummary.complexCases %></strong></article>
+              <article class="logbook-browser-stat"><span>Flagged</span><strong><%= team.unitBrowseSummary.flaggedCases %></strong></article>
+            </div>
+          </div>
+          <form action="/logbook" method="get" class="logbook-browser-filter-bar">
+            <input type="hidden" name="periodStart" value="<%= personal.range.start %>" />
+            <input type="hidden" name="periodEnd" value="<%= personal.range.end %>" />
+            <input type="hidden" name="entrySearch" value="<%= personal.browseFilters.searchText %>" />
+            <input type="hidden" name="entryCaseType" value="<%= personal.browseFilters.caseType %>" />
+            <input type="hidden" name="entryDepartment" value="<%= personal.browseFilters.surgicalDepartment %>" />
+            <% if (personal.browseFilters.flaggedOnly) { %>
+              <input type="hidden" name="entryFlagged" value="true" />
+            <% } %>
+            <input type="hidden" name="teamView" value="overview" />
+            <input type="hidden" name="memberPeriodStart" value="<%= team.range.start %>" />
+            <input type="hidden" name="memberPeriodEnd" value="<%= team.range.end %>" />
+            <label><span>Search</span><input type="search" name="teamEntrySearch" value="<%= team.browseFilters.searchText %>" placeholder="Learner, surgery, OT, case #..." /></label>
+            <label>
+              <span>Case type</span>
+              <select name="teamEntryCaseType">
+                <option value="">All case types</option>
+                <% entryOptions.caseTypes.forEach((option) => { %>
+                  <option value="<%= option %>" <%= team.browseFilters.caseType === option ? "selected" : "" %>><%= option %></option>
+                <% }) %>
+              </select>
+            </label>
+            <label>
+              <span>Department</span>
+              <select name="teamEntryDepartment">
+                <option value="">All departments</option>
+                <% entryOptions.surgicalDepartments.forEach((option) => { %>
+                  <option value="<%= option %>" <%= team.browseFilters.surgicalDepartment === option ? "selected" : "" %>><%= option %></option>
+                <% }) %>
+              </select>
+            </label>
+            <label class="logbook-browser-toggle">
+              <input type="checkbox" name="teamEntryFlagged" value="true" <%= team.browseFilters.flaggedOnly ? "checked" : "" %> />
+              <span>Flagged only</span>
+            </label>
+            <button type="submit">Browse unit cases</button>
+          </form>
+          <% if (!team.unitBrowseEntries.length) { %>
+            <div class="empty-state">No unit cases match the current browser filters.</div>
+          <% } %>
+          <div class="logbook-browser-results compact-browser-results">
+            <% team.unitBrowseEntries.forEach((entry) => { %>
+              <article class="logbook-browser-unit-card">
+                <div class="logbook-entry-head">
+                  <div>
+                    <p class="section-kicker"><%= entry.userName %> <%= entry.designation ? `| ${entry.designation}` : "" %></p>
+                    <strong><%= caseLabel(entry) %> | <%= entry.procedureName %></strong>
+                  </div>
+                  <div class="tag-row">
+                    <span class="pill"><%= entry.activityDate %></span>
+                    <span class="pill"><%= entry.caseType %></span>
+                    <span class="pill"><%= pretty(entry.roleKey) %></span>
+                  </div>
+                </div>
+                <div class="logbook-card-actions">
+                <button
+                  type="button"
+                  class="button-link button-link-secondary logbook-view-case-button"
+                  data-logbook-case-view
+                  data-case-owner="<%= entry.userName %><%= entry.designation ? ` | ${entry.designation}` : '' %>"
+                  data-case-number="<%= caseLabel(entry) %>"
+                  data-case-title="<%= entry.procedureName %>"
+                  data-case-date="<%= entry.activityDate %>"
+                  data-case-type="<%= entry.caseType %>"
+                  data-case-department="<%= showText(entry.surgicalDepartment) %>"
+                  data-case-ot="<%= showText(entry.otNumber) %>"
+                  data-case-age="<%= showText(entry.ageYears) %>"
+                  data-case-gender="<%= showText(entry.gender) %>"
+                  data-case-asa="<%= formatAsa(entry.asaPhysicalStatus) %>"
+                  data-case-bmi="<%= entry.bmi ?? '-' %>"
+                  data-case-time="<%= showText(entry.surgeryStartTime) %> to <%= showText(entry.surgeryEndTime) %>"
+                  data-case-duration="<%= entry.durationMinutes ? `${entry.durationMinutes} minutes` : '-' %>"
+                  data-case-plan="<%= showText(entry.anaestheticPlanned || pretty(entry.anaesthesiaTechnique)) %>"
+                  data-case-supervision="<%= showText(entry.supervisionLevel) %>"
+                  data-case-airway="<%= showText(entry.airwayManagement) %>"
+                  data-case-scopy="<%= showText(entry.scopyTechnique) %>"
+                  data-case-postop="<%= joinItems(entry.postOperativeCare) %>"
+                  data-case-comorbidities="<%= joinItems(entry.comorbidities) %>"
+                  data-case-procedures="<%= joinItems(entry.procedures) %>"
+                  data-case-analgesia="<%= joinItems(entry.analgesiaItems) %>"
+                  data-case-events="<%= entry.hadComplication ? entry.complicationSummary : '-' %>"
+                  data-case-learning="<%= joinItems(entry.learningPoints) %>"
+                >View case</button>
+                <a class="button-link button-link-secondary logbook-print-case-button" href="/logbook/print/case/<%= entry.id %>" target="_blank" rel="noreferrer">Print case</a>
+                </div>
+                <p class="meta-text"><%= showText(entry.surgicalDepartment) %> | <%= showText(entry.anaestheticPlanned || pretty(entry.anaesthesiaTechnique)) %> | <%= showText(entry.supervisionLevel) %></p>
+                <p class="meta-text">OT <%= showText(entry.otNumber) %> | <%= formatAsa(entry.asaPhysicalStatus) %> | Post op: <%= joinItems(entry.postOperativeCare) %></p>
+                <% if (entry.hadComplication) { %>
+                  <p class="status-callout status-returned">Intra operative events: <%= entry.complicationSummary %></p>
+                <% } %>
+                <% if (entry.learningPoints.length) { %>
+                  <p class="meta-text">Learning: <%= joinItems(entry.learningPoints) %></p>
+                <% } %>
+              </article>
+            <% }) %>
+          </div>
+        </section>
+
+        <section class="panel panel-nested">
+          <div class="section-header">
+            <div>
+              <p class="section-kicker">Comparison table</p>
+              <h3>All trainees in one screen</h3>
+            </div>
+          </div>
+          <div class="overview-table-shell">
+            <div class="overview-table">
+              <div class="overview-table-head">
+                <span>Name</span>
+                <span>Cases</span>
+                <span>Direct care</span>
+                <span>Domains</span>
+                <span>Complex</span>
+                <span>Emergency</span>
+                <span>Flags</span>
+                <span>Top domain</span>
+              </div>
+              <% team.overviewMembers.forEach((member) => { %>
+                <article class="overview-table-row">
+                  <span><strong><%= member.userName %></strong><small><%= member.roleLabel %></small></span>
+                  <span><%= member.totalCases %></span>
+                  <span><%= member.directCareRatio %>%</span>
+                  <span><%= member.domainCoverage %></span>
+                  <span><%= member.complexCases %></span>
+                  <span><%= member.emergencyCases %></span>
+                  <span><%= member.flaggedEvents %></span>
+                  <span><%= member.topDomain %></span>
+                </article>
+              <% }) %>
+            </div>
+          </div>
+        </section>
+      <% } %>
+    </section>
+  <% } %>
+</section>
+
+<div class="logbook-case-modal" data-logbook-case-modal hidden>
+  <div class="logbook-case-modal-backdrop" data-logbook-case-modal-close></div>
+  <section class="logbook-case-modal-card" role="dialog" aria-modal="true" aria-labelledby="logbook-case-modal-title">
+    <div class="logbook-case-modal-hero">
+      <div>
+        <p class="section-kicker" data-case-modal-owner>Case owner</p>
+        <h2 id="logbook-case-modal-title" data-case-modal-title>Case detail</h2>
+        <div class="tag-row">
+          <span class="pill" data-case-modal-number>Case</span>
+          <span class="pill" data-case-modal-date>Date</span>
+          <span class="pill" data-case-modal-type>Type</span>
+        </div>
+      </div>
+      <button type="button" class="button-link button-link-secondary" data-logbook-case-modal-close>Close</button>
+    </div>
+
+    <div class="logbook-case-modal-body">
+      <section class="logbook-case-modal-section">
+        <p class="section-kicker">Case identity</p>
+        <div class="logbook-case-modal-grid">
+          <article><span>Department</span><strong data-case-modal-department>-</strong></article>
+          <article><span>OT number</span><strong data-case-modal-ot>-</strong></article>
+          <article><span>Timing</span><strong data-case-modal-time>-</strong></article>
+          <article><span>Duration</span><strong data-case-modal-duration>-</strong></article>
+        </div>
+      </section>
+
+      <section class="logbook-case-modal-section">
+        <p class="section-kicker">Patient and anaesthesia context</p>
+        <div class="logbook-case-modal-grid">
+          <article><span>Demographics</span><strong><span data-case-modal-age>-</span> y | <span data-case-modal-gender>-</span></strong></article>
+          <article><span>ASA / BMI</span><strong><span data-case-modal-asa>-</span> | BMI <span data-case-modal-bmi>-</span></strong></article>
+          <article><span>Anaesthetic plan</span><strong data-case-modal-plan>-</strong></article>
+          <article><span>Supervision</span><strong data-case-modal-supervision>-</strong></article>
+          <article><span>Airway</span><strong data-case-modal-airway>-</strong></article>
+          <article><span>Scopy</span><strong data-case-modal-scopy>-</strong></article>
+        </div>
+      </section>
+
+      <section class="logbook-case-modal-section">
+        <p class="section-kicker">Procedures and outcome</p>
+        <div class="logbook-case-modal-notes">
+          <article><span>Comorbidities</span><p data-case-modal-comorbidities>-</p></article>
+          <article><span>Procedures</span><p data-case-modal-procedures>-</p></article>
+          <article><span>Analgesia</span><p data-case-modal-analgesia>-</p></article>
+          <article><span>Post operative care</span><p data-case-modal-postop>-</p></article>
+          <article><span>Intra operative events</span><p data-case-modal-events>-</p></article>
+        </div>
+      </section>
+
+      <section class="logbook-case-modal-section learning-section">
+        <p class="section-kicker">Learning points</p>
+        <p data-case-modal-learning>-</p>
+      </section>
+    </div>
+  </section>
+</div>
+
+<%- include("../partials/footer") %>

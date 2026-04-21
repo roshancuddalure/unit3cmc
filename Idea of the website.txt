@@ -1,0 +1,31 @@
+hi buddy i want you to setme a full website configuration. that i want to use for our department transplantation unit management. the main aims were to 
+1.develop a elearning platform for the postgraduates.
+	should have articles, h5p contents linked ones, short courses and their progress management.
+2. creating,maintaining, editing SOPs for various procedures
+3. have a logbook for the pgs and those logs shoudl be monitored and analysed for their weekly work reports.
+
+requirements:
+i want full flexibility over the ideation and development and want to scale to additional highly complex things in future. so tell which tech stack would be good. i developed a website networking one with node.js
+i think the following tech stack would be good but need to now your suggestion before planning to start.
+
+Frontend
+
+Plain HTML, CSS, and vanilla JavaScript
+Main client logic is in public/app.js
+Shared styling is in public/styles.css
+Uses Socket.IO client for realtime features and Iconify for icons
+No React, Next.js, Vue, Angular, or frontend bundler is currently set up
+Middle / App Layer
+
+Node.js with CommonJS
+Express 4.x as the web framework
+express-session for auth/session handling
+connect-pg-simple to store sessions in PostgreSQL
+dotenv for environment config
+Realtime events via Socket.IO
+Backend / Data Layer
+
+PostgreSQL database via the pg driver
+Password hashing with bcrypt
+Additional crypto utilities with Node’s built-in crypto
+Server/API is mainly in one monolithic file: index.js (line 1)

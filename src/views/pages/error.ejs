@@ -1,0 +1,8 @@
+<%- include("../partials/header", { title, currentUser, flash }) %>
+<section class="panel narrow">
+  <p class="eyebrow">Error <%= statusCode %></p>
+  <h1><%= message %></h1>
+  <p class="section-copy">The system stayed safe, but this request could not be completed. Return to the main workspace or try again after checking the previous step.</p>
+  <a class="button-link button-link-primary" href="/">Back home</a>
+</section>
+<%- include("../partials/footer") %>

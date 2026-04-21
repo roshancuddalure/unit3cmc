@@ -1,0 +1,69 @@
+<%- include("../partials/header", { title, currentUser, flash }) %>
+<section class="dashboard-grid">
+  <section class="panel">
+    <p class="eyebrow">Dashboard</p>
+    <h1><%= lead %></h1>
+    <p class="section-copy">
+      <%= canReview
+        ? "Review the current operational pulse of Unit 3 and move quickly into the workflows that need attention."
+        : "Track your own learning, clinical case logging, and weekly progress without the noise of unit-level oversight tools." %>
+    </p>
+    <div class="stat-grid">
+      <% cards.forEach((card, i) => { %>
+        <%
+          const icons = [
+            "ph:notebook-bold",
+            "ph:check-square-bold",
+            "ph:files-bold",
+            "ph:graduation-cap-bold",
+            "ph:stethoscope-bold",
+            "ph:users-bold"
+          ];
+          const icon = icons[i % icons.length];
+        %>
+        <article class="stat-card">
+          <div class="stat-icon">
+            <span class="iconify" data-icon="<%= icon %>"></span>
+          </div>
+          <p class="meta-text"><%= card.label %></p>
+          <strong><%= card.value %></strong>
+        </article>
+      <% }) %>
+    </div>
+  </section>
+  <aside class="panel">
+    <p class="section-kicker">Priority view</p>
+    <h2><%= canReview ? "Daily focus" : "Your next steps" %></h2>
+    <ul class="clean-list">
+      <% if (canReview) { %>
+        <li>Check pending trainee reviews before weekly sign-off windows close.</li>
+        <li>Keep SOP versions current so teaching and procedures stay aligned.</li>
+        <li>Use the learning and case modules to connect study plans with unit activity.</li>
+      <% } else { %>
+        <li>Keep your case log up to date so your weekly report reflects your actual work.</li>
+        <li>Use SOPs and learning resources to support current training goals and clinical preparation.</li>
+        <li>Review your own progress regularly before weekly submission windows close.</li>
+      <% } %>
+    </ul>
+    <div class="callout" style="margin-top: 1.25rem;">
+      <p class="section-kicker">Quick links</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
+        <a class="button-link" href="/logbook" style="font-size: 0.82rem; padding: 0.45rem 0.85rem;">
+          <span class="iconify" data-icon="ph:notebook-bold"></span> Logbook
+        </a>
+        <% if (hasPermission("logbook:review")) { %>
+          <a class="button-link" href="/reviews" style="font-size: 0.82rem; padding: 0.45rem 0.85rem;">
+            <span class="iconify" data-icon="ph:check-square-bold"></span> Reviews
+          </a>
+        <% } %>
+        <a class="button-link" href="/documents" style="font-size: 0.82rem; padding: 0.45rem 0.85rem;">
+          <span class="iconify" data-icon="ph:files-bold"></span> SOPs
+        </a>
+        <a class="button-link" href="/learning" style="font-size: 0.82rem; padding: 0.45rem 0.85rem;">
+          <span class="iconify" data-icon="ph:graduation-cap-bold"></span> Learning
+        </a>
+      </div>
+    </div>
+  </aside>
+</section>
+<%- include("../partials/footer") %>

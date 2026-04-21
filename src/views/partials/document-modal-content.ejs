@@ -1,0 +1,115 @@
+<% if (!document) { %>
+  <div class="sop-modal-empty">
+    <p class="eyebrow">SOP</p>
+    <h2>Document not found</h2>
+    <p class="section-copy">This SOP could not be loaded.</p>
+  </div>
+<% } else { %>
+  <div class="sop-modal-hero">
+    <div>
+      <p class="eyebrow">SOP</p>
+      <h2><%= document.title %></h2>
+      <% if (document.subtitle) { %>
+        <p class="section-copy"><%= document.subtitle %></p>
+      <% } %>
+    </div>
+    <div class="sop-modal-actions">
+      <a class="button-link button-link-secondary" href="/documents/<%= document.id %>">Open full page</a>
+    </div>
+  </div>
+
+  <div class="sop-modal-meta">
+    <span class="pill"><%= document.category %></span>
+    <% if (document.scopeArea) { %>
+      <span class="pill"><%= document.scopeArea %></span>
+    <% } %>
+    <span class="status-pill status-<%= document.status %>"><%= document.status %></span>
+    <span class="pill">Current version <%= document.latestVersion %></span>
+    <span class="pill">Updated <%= document.updatedAt %></span>
+    <% if (document.effectiveDate) { %>
+      <span class="pill">Effective <%= document.effectiveDate %></span>
+    <% } %>
+    <% if (document.reviewDueDate) { %>
+      <span class="pill">Review due <%= document.reviewDueDate %></span>
+    <% } %>
+  </div>
+
+  <div class="sop-modal-grid">
+    <section class="sop-modal-content-panel">
+      <div class="section-header">
+        <div>
+          <p class="section-kicker">Current SOP</p>
+          <h3>Current document</h3>
+        </div>
+      </div>
+      <% if (currentVersion) { %>
+        <div class="sop-reading-surface">
+          <% if (currentVersion.versionNotes) { %>
+            <div class="sop-reading-note">
+              <strong>Version note</strong>
+              <p><%= currentVersion.versionNotes %></p>
+            </div>
+          <% } %>
+          <% if (currentVersion.changeSummary) { %>
+            <div class="sop-reading-note">
+              <strong>Change summary</strong>
+              <p><%= currentVersion.changeSummary %></p>
+            </div>
+          <% } %>
+          <pre class="sop-content"><%= currentVersion.contentHtml %></pre>
+        </div>
+      <% } else { %>
+        <div class="empty-state">No current SOP content is available.</div>
+      <% } %>
+    </section>
+
+    <aside class="sop-modal-side">
+      <section class="panel sop-mini-panel">
+        <p class="section-kicker">Document history</p>
+        <h3>Recent revisions</h3>
+        <% if (!versions.length) { %>
+          <div class="empty-state">No versions recorded yet.</div>
+        <% } %>
+        <% versions.slice(0, 4).forEach((version) => { %>
+          <article class="list-card compact-card">
+            <strong>Version <%= version.versionNumber %></strong>
+            <div class="tag-row">
+              <span class="pill"><%= version.createdAt %></span>
+              <% if (version.submittedForReviewAt) { %>
+                <span class="pill">Submitted</span>
+              <% } %>
+              <% if (version.approvedAt) { %>
+                <span class="pill">Approved</span>
+              <% } %>
+            </div>
+            <% if (version.versionNotes) { %>
+              <p class="meta-text"><%= version.versionNotes %></p>
+            <% } %>
+          </article>
+        <% }) %>
+      </section>
+
+      <section class="panel sop-mini-panel">
+        <p class="section-kicker">Review history</p>
+        <h3>Latest updates</h3>
+        <% if (!reviewEvents.length) { %>
+          <div class="empty-state">No review events recorded yet.</div>
+        <% } %>
+        <% reviewEvents.slice(0, 4).forEach((event) => { %>
+          <article class="list-card compact-card">
+            <strong><%= event.decision %></strong>
+            <div class="tag-row">
+              <% if (event.actorName) { %>
+                <span class="pill"><%= event.actorName %></span>
+              <% } %>
+              <span class="pill"><%= event.createdAt %></span>
+            </div>
+            <% if (event.comments) { %>
+              <p class="meta-text"><%= event.comments %></p>
+            <% } %>
+          </article>
+        <% }) %>
+      </section>
+    </aside>
+  </div>
+<% } %>

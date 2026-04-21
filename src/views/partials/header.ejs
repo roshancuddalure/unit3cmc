@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= title %> | Unit 3 Management</title>
+    <link rel="icon" type="image/png" href="/assets/logo-transparent.png" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="https://code.iconify.design/3/3.1.1/iconify.min.js" defer></script>
+  </head>
+  <body>
+    <div class="site-chrome">
+      <div class="top-ribbon">
+        <span>Christian Medical College, Vellore</span>
+        <span>Unit 3 Anaesthesia Management System</span>
+      </div>
+      <header class="site-header">
+        <a class="brand" href="/">
+          <span class="brand-mark">
+            <img src="/assets/logo-transparent.png" alt="Christian Medical College crest" />
+          </span>
+          <span class="brand-copy">
+            <strong>Unit 3 Management</strong>
+            <em>Operations, learning, archives, and trainee progress</em>
+          </span>
+        </a>
+        <% if (currentUser) { %>
+          <div class="site-nav site-nav-private">
+            <span class="pill">
+              <span class="iconify" data-icon="ph:lock-simple-bold"></span>
+              Secure access
+            </span>
+            <span class="pill">
+              <span class="iconify" data-icon="ph:files-bold"></span>
+              SOP library
+            </span>
+          </div>
+        <% } else { %>
+          <div class="site-nav site-nav-public">
+            <span class="pill">
+              <span class="iconify" data-icon="ph:lock-simple-bold"></span>
+              Secure clinical operations
+            </span>
+            <span class="pill">
+              <span class="iconify" data-icon="ph:notebook-bold"></span>
+              Training and logbooks
+            </span>
+            <span class="pill">
+              <span class="iconify" data-icon="ph:files-bold"></span>
+              SOP library
+            </span>
+          </div>
+        <% } %>
+        <div class="user-actions">
+          <% if (currentUser) { %>
+            <div class="user-chip">
+              <span class="user-chip-label">Signed in as</span>
+              <strong><%= currentUser.displayName %></strong>
+            </div>
+            <form action="/auth/logout" method="post">
+              <button type="submit">
+                <span class="iconify" data-icon="ph:sign-out-bold"></span>
+                Sign out
+              </button>
+            </form>
+          <% } else { %>
+            <a class="button-link button-link-primary" href="/auth/login">
+              <span class="iconify" data-icon="ph:sign-in-bold"></span>
+              Sign in
+            </a>
+          <% } %>
+        </div>
+      </header>
+      <div class="site-intro">
+        <div>
+          <% if (currentUser) { %>
+            <p class="eyebrow">Unit 3 Anaesthesia</p>
+            <p class="site-summary">
+              One place for logbooks, SOPs, learning resources, case discussions, and day-to-day unit work.
+            </p>
+          <% } else { %>
+            <p class="eyebrow">Protected access</p>
+            <p class="site-summary">
+              Sign in to access dashboards, SOPs, learning resources, reviews, and unit updates.
+            </p>
+          <% } %>
+        </div>
+      </div>
+    </div>
+    <% if (flash) { %>
+      <div class="flash flash-<%= flash.type %>">
+        <% if (flash.type === 'success') { %>
+          <span class="iconify" data-icon="ph:check-circle-bold"></span>
+        <% } else if (flash.type === 'error') { %>
+          <span class="iconify" data-icon="ph:warning-circle-bold"></span>
+        <% } else { %>
+          <span class="iconify" data-icon="ph:info-bold"></span>
+        <% } %>
+        <%= flash.message %>
+      </div>
+    <% } %>
+    <main class="page-shell <%= currentUser ? 'page-shell-app' : '' %>">
+      <% if (currentUser) { %>
+        <div class="app-layout">
+          <aside class="operator-rail">
+            <div class="operator-rail-card">
+              <p class="eyebrow">Menu</p>
+              <h2>Navigation</h2>
+              <p class="section-copy">
+                Open the sections you need for your work in the unit.
+              </p>
+            </div>
+            <nav class="operator-nav" aria-label="Primary">
+              <% if (hasPermission("dashboard:view")) { %>
+                <a href="/dashboard" class="<%= currentPath.startsWith('/dashboard') ? 'active' : '' %>">
+                  <span class="iconify" data-icon="ph:squares-four-bold"></span>
+                  <span>
+                    <strong>Dashboard</strong>
+                    <small>Overview</small>
+                  </span>
+                </a>
+              <% } %>
+              <% if (hasPermission("logbook:write")) { %>
+                <a href="/logbook" class="<%= currentPath.startsWith('/logbook') ? 'active' : '' %>">
+                  <span class="iconify" data-icon="ph:notebook-bold"></span>
+                  <span>
+                    <strong>Logbook</strong>
+                    <small>Your cases and weekly report</small>
+                  </span>
+                </a>
+              <% } %>
+              <% if (hasPermission("logbook:review")) { %>
+                <a href="/reviews" class="<%= currentPath.startsWith('/reviews') ? 'active' : '' %>">
+                  <span class="iconify" data-icon="ph:check-square-bold"></span>
+                  <span>
+                    <strong>Reviews</strong>
+                    <small>Weekly reports and feedback</small>
+                  </span>
+                </a>
+              <% } %>
+              <% if (hasPermission("documents:view")) { %>
+                <a href="/documents" class="<%= currentPath.startsWith('/documents') ? 'active' : '' %>">
+                  <span class="iconify" data-icon="ph:files-bold"></span>
+                  <span>
+                    <strong>SOPs</strong>
+                    <small>Guidelines and current documents</small>
+                  </span>
+                </a>
+              <% } %>
+              <% if (hasPermission("learning:view")) { %>
+                <a href="/learning" class="<%= currentPath.startsWith('/learning') ? 'active' : '' %>">
+                  <span class="iconify" data-icon="ph:graduation-cap-bold"></span>
+                  <span>
+                    <strong>Learning</strong>
+                    <small>Study resources and progress</small>
+                  </span>
+                </a>
+              <% } %>
+              <% if (hasPermission("cases:view")) { %>
+                <a href="/cases" class="<%= currentPath.startsWith('/cases') ? 'active' : '' %>">
+                  <span class="iconify" data-icon="ph:stethoscope-bold"></span>
+                  <span>
+                    <strong>Cases</strong>
+                    <small>Case library</small>
+                  </span>
+                </a>
+              <% } %>
+              <a href="/profile" class="<%= currentPath.startsWith('/profile') ? 'active' : '' %>">
+                <span class="iconify" data-icon="ph:user-circle-bold"></span>
+                <span>
+                  <strong>My Profile</strong>
+                  <small>Personal and contact details</small>
+                </span>
+              </a>
+              <% if (hasPermission("admin:manage")) { %>
+                <a href="/admin" class="<%= currentPath.startsWith('/admin') ? 'active' : '' %>">
+                  <span class="iconify" data-icon="ph:shield-check-bold"></span>
+                  <span>
+                    <strong>Admin</strong>
+                    <small>Users and access</small>
+                  </span>
+                </a>
+              <% } %>
+            </nav>
+            <div class="operator-rail-card operator-rail-card-quiet">
+              <p class="eyebrow">Your access</p>
+              <strong><%= currentUser.role.replaceAll('_', ' ') %></strong>
+              <p class="section-copy">
+                The pages shown here match the access approved for your account.
+              </p>
+            </div>
+          </aside>
+          <section class="workspace-canvas">
+      <% } %>

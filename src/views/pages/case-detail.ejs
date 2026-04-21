@@ -1,0 +1,270 @@
+<%
+  const pretty = (value) =>
+    String(value || "")
+      .split("_")
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+
+  const statusClass =
+    caseItem.status === "submitted"
+      ? "submitted"
+      : caseItem.status === "changes_requested"
+        ? "returned"
+        : caseItem.status === "approved"
+          ? "approved"
+          : caseItem.status;
+%>
+<%- include("../partials/header", { title, currentUser, flash }) %>
+
+<section class="case-reading-hero">
+  <div class="case-reading-hero-copy">
+    <p class="eyebrow">Teaching case</p>
+    <h1><%= caseItem.title %></h1>
+    <% if (caseItem.subtitle) { %>
+      <p class="lead"><%= caseItem.subtitle %></p>
+    <% } %>
+    <div class="tag-row">
+      <span class="status-pill status-<%= statusClass %>"><%= pretty(caseItem.status) %></span>
+      <% if (caseItem.isFeatured) { %>
+        <span class="pill">Featured</span>
+      <% } %>
+      <span class="pill"><%= pretty(caseItem.specialtyArea) %></span>
+      <span class="pill"><%= pretty(caseItem.anaesthesiaTechnique) %></span>
+      <span class="pill"><%= pretty(caseItem.urgency) %></span>
+      <span class="pill"><%= pretty(caseItem.complexityLevel) %></span>
+    </div>
+  </div>
+  <aside class="case-reading-meta">
+    <span>Age band</span>
+    <strong><%= pretty(caseItem.patientAgeBand) %></strong>
+    <span>Setting</span>
+    <strong><%= pretty(caseItem.setting) %></strong>
+    <span>Critical event</span>
+    <strong><%= caseItem.hadCriticalEvent ? "Yes" : "No" %></strong>
+  </aside>
+</section>
+
+<nav class="case-reading-nav" aria-label="Case sections">
+  <a href="#case-summary">Summary</a>
+  <a href="#case-learning">Learning</a>
+  <% if (caseItem.relatedDocuments.length || caseItem.relatedLearningResources.length) { %>
+    <a href="#case-links">Linked resources</a>
+  <% } %>
+  <% if (caseItem.similarCases.length) { %>
+    <a href="#case-similar">Similar cases</a>
+  <% } %>
+  <a href="#case-comments">Comments</a>
+  <% if (isContributor || canReview || canFinalize) { %>
+    <a href="#case-actions">Actions</a>
+  <% } %>
+</nav>
+
+<section class="case-reading-layout">
+  <main class="case-reading-main">
+    <article class="case-reading-card" id="case-summary">
+      <p class="section-kicker">Summary</p>
+      <h2>What happened</h2>
+      <p><%= caseItem.summary %></p>
+    </article>
+
+    <article class="case-reading-card case-reading-highlight" id="case-learning">
+      <p class="section-kicker">Learning</p>
+      <h2>What to remember</h2>
+      <% if (caseItem.learningPoints) { %>
+        <p><%= caseItem.learningPoints %></p>
+      <% } else { %>
+        <p class="meta-text">No learning points have been added yet.</p>
+      <% } %>
+      <% if (caseItem.takeHomePoints) { %>
+        <div class="case-takeaway">
+          <strong>Take-home points</strong>
+          <p><%= caseItem.takeHomePoints %></p>
+        </div>
+      <% } %>
+    </article>
+
+    <% if (caseItem.whyThisCaseMatters || caseItem.keyDecisionPoints || caseItem.whatWentWell || caseItem.whatCouldImprove) { %>
+      <section class="case-teaching-grid">
+        <% if (caseItem.whyThisCaseMatters) { %>
+          <article class="case-teaching-card">
+            <span>01</span>
+            <strong>Why this case matters</strong>
+            <p><%= caseItem.whyThisCaseMatters %></p>
+          </article>
+        <% } %>
+        <% if (caseItem.keyDecisionPoints) { %>
+          <article class="case-teaching-card">
+            <span>02</span>
+            <strong>Key decision points</strong>
+            <p><%= caseItem.keyDecisionPoints %></p>
+          </article>
+        <% } %>
+        <% if (caseItem.whatWentWell) { %>
+          <article class="case-teaching-card">
+            <span>03</span>
+            <strong>What went well</strong>
+            <p><%= caseItem.whatWentWell %></p>
+          </article>
+        <% } %>
+        <% if (caseItem.whatCouldImprove) { %>
+          <article class="case-teaching-card">
+            <span>04</span>
+            <strong>What could be improved</strong>
+            <p><%= caseItem.whatCouldImprove %></p>
+          </article>
+        <% } %>
+      </section>
+    <% } %>
+
+    <% if (caseItem.relatedDocuments.length || caseItem.relatedLearningResources.length) { %>
+      <article class="case-reading-card" id="case-links">
+        <p class="section-kicker">Linked resources</p>
+        <h2>Read alongside this case</h2>
+        <% if (caseItem.relatedDocuments.length) { %>
+          <p class="meta-text">Related SOPs</p>
+          <div class="tag-row">
+            <% caseItem.relatedDocuments.forEach((document) => { %>
+              <a class="button-link button-link-secondary" href="/documents/<%= document.id %>"><%= document.title %></a>
+            <% }) %>
+          </div>
+        <% } %>
+        <% if (caseItem.relatedLearningResources.length) { %>
+          <p class="meta-text">Related learning resources</p>
+          <div class="tag-row">
+            <% caseItem.relatedLearningResources.forEach((resource) => { %>
+              <span class="pill"><%= resource.title %> - <%= resource.resourceType %></span>
+            <% }) %>
+          </div>
+        <% } %>
+      </article>
+    <% } %>
+
+    <% if (caseItem.similarCases.length) { %>
+      <article class="case-reading-card" id="case-similar">
+        <p class="section-kicker">Similar cases</p>
+        <h2>Related cases worth reading</h2>
+        <section class="case-similar-grid">
+          <% caseItem.similarCases.forEach((relatedCase) => { %>
+            <article class="case-mini-card">
+              <strong><a href="/cases/<%= relatedCase.id %>"><%= relatedCase.title %></a></strong>
+              <% if (relatedCase.subtitle) { %>
+                <p class="meta-text"><%= relatedCase.subtitle %></p>
+              <% } %>
+              <div class="tag-row">
+                <% if (relatedCase.isFeatured) { %>
+                  <span class="pill">Featured</span>
+                <% } %>
+                <span class="pill"><%= pretty(relatedCase.specialtyArea) %></span>
+                <span class="pill"><%= pretty(relatedCase.anaesthesiaTechnique) %></span>
+              </div>
+            </article>
+          <% }) %>
+        </section>
+      </article>
+    <% } %>
+  </main>
+
+  <aside class="case-reading-side">
+    <section class="case-side-card">
+      <p class="section-kicker">Case details</p>
+      <% if (caseItem.contributorNames.length) { %>
+        <p class="meta-text">Contributors</p>
+        <strong><%= caseItem.contributorNames.join(", ") %></strong>
+      <% } %>
+      <% if (caseItem.createdByName) { %>
+        <p class="meta-text">Added by</p>
+        <strong><%= caseItem.createdByName %></strong>
+      <% } %>
+      <% if (caseItem.tags.length) { %>
+        <p class="meta-text">Tags</p>
+        <div class="tag-row">
+          <% caseItem.tags.forEach((tag) => { %>
+            <span class="tag"><%= tag %></span>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+
+    <section class="case-side-card" id="case-comments">
+      <p class="section-kicker">Comments</p>
+      <h2>Discussion notes</h2>
+      <% if (canSuggestEdits) { %>
+        <form action="/cases/<%= caseItem.id %>/comments" method="post" class="stack-form">
+          <label>
+            <span>Comment type</span>
+            <select name="commentType">
+              <option value="note">General note</option>
+              <option value="suggestion">Suggested edit</option>
+            </select>
+          </label>
+          <label>
+            <span>Comment</span>
+            <textarea name="comment" rows="4" required placeholder="Add a de-identified note or suggested improvement"></textarea>
+          </label>
+          <button type="submit">Save comment</button>
+        </form>
+      <% } %>
+
+      <% if (!comments.length) { %>
+        <div class="empty-state">No comments yet for this case.</div>
+      <% } %>
+
+      <% comments.forEach((comment) => { %>
+        <article class="case-comment-card">
+          <strong><%= comment.commentType === "suggestion" ? "Suggested edit" : "Note" %></strong>
+          <p><%= comment.comment %></p>
+          <div class="tag-row">
+            <% if (comment.authorName) { %>
+              <span class="pill"><%= comment.authorName %></span>
+            <% } %>
+            <span class="pill"><%= comment.createdAt %></span>
+          </div>
+        </article>
+      <% }) %>
+    </section>
+
+    <% if (isContributor || canReview || canFinalize) { %>
+      <section class="case-side-card" id="case-actions">
+        <p class="section-kicker">Actions</p>
+        <h2>Next step</h2>
+        <div class="case-action-stack">
+          <% if (isContributor && (caseItem.status === "draft" || caseItem.status === "changes_requested")) { %>
+            <form action="/cases/<%= caseItem.id %>/status" method="post">
+              <input type="hidden" name="status" value="submitted" />
+              <button type="submit">Submit for review</button>
+            </form>
+          <% } %>
+
+          <% if (canReview) { %>
+            <form action="/cases/<%= caseItem.id %>/status" method="post">
+              <input type="hidden" name="status" value="changes_requested" />
+              <button type="submit" class="button-link button-link-secondary">Request changes</button>
+            </form>
+            <form action="/cases/<%= caseItem.id %>/status" method="post">
+              <input type="hidden" name="status" value="approved" />
+              <button type="submit" class="button-link button-link-secondary">Approve</button>
+            </form>
+          <% } %>
+
+          <% if (canFinalize) { %>
+            <form action="/cases/<%= caseItem.id %>/featured" method="post">
+              <input type="hidden" name="isFeatured" value="<%= caseItem.isFeatured ? 'false' : 'true' %>" />
+              <button type="submit" class="button-link button-link-secondary"><%= caseItem.isFeatured ? "Remove featured mark" : "Mark as featured" %></button>
+            </form>
+            <form action="/cases/<%= caseItem.id %>/status" method="post">
+              <input type="hidden" name="status" value="published" />
+              <button type="submit" class="button-link button-link-secondary">Publish</button>
+            </form>
+            <form action="/cases/<%= caseItem.id %>/status" method="post">
+              <input type="hidden" name="status" value="archived" />
+              <button type="submit" class="button-link button-link-secondary">Archive</button>
+            </form>
+          <% } %>
+        </div>
+      </section>
+    <% } %>
+  </aside>
+</section>
+
+<%- include("../partials/footer") %>

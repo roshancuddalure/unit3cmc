@@ -1,0 +1,1218 @@
+<%- include("../partials/header", { title, currentUser, flash }) %>
+
+<% if (hasPermission("learning:manage")) { %>
+  <%
+    const totalCount = resources.length;
+    const interactiveCount = resources.filter((r) => r.h5pContentId).length;
+    const publishedCount = resources.filter((r) => r.status === "published").length;
+    const draftCount = resources.filter((r) => r.status === "draft").length;
+    const creatorProgram = creatorProgramTree;
+    const programCount = creatorPrograms ? creatorPrograms.length : 0;
+    const unplacedCount = unplacedResources ? unplacedResources.length : 0;
+  %>
+
+  <div class="learning-command-bar">
+    <div class="learning-command-bar-left">
+      <p class="eyebrow">Learning Academy</p>
+      <h1>Curriculum Workspace</h1>
+      <div class="learning-stats-ribbon">
+        <div class="learning-stat">
+          <strong><%= totalCount %></strong>
+          <span>Resources</span>
+        </div>
+        <div class="learning-stat learning-stat-accent">
+          <strong><%= interactiveCount %></strong>
+          <span>Interactive</span>
+        </div>
+        <div class="learning-stat learning-stat-success">
+          <strong><%= publishedCount %></strong>
+          <span>Published</span>
+        </div>
+        <div class="learning-stat">
+          <strong><%= draftCount %></strong>
+          <span>Drafts</span>
+        </div>
+        <div class="learning-stat">
+          <strong><%= academyStats.placedItems %></strong>
+          <span>Items placed</span>
+        </div>
+        <div class="learning-stat">
+          <strong><%= academyStats.chapters %></strong>
+          <span>Chapters</span>
+        </div>
+        <div class="learning-stat">
+          <strong><%= academyStats.subchapters %></strong>
+          <span>Subchapters</span>
+        </div>
+      </div>
+    </div>
+    <div class="learning-command-bar-right">
+      <% if (creatorProgram) { %>
+        <button type="button" class="button-link button-link-secondary" data-academy-modal-open="academy-modal-add-chapter">
+          <span class="iconify" data-icon="ph:rows-plus-bottom-bold"></span>
+          Add chapter
+        </button>
+        <button type="button" class="button-link button-link-secondary" data-logbook-jump-tab="settings">
+          <span class="iconify" data-icon="ph:sliders-horizontal-bold"></span>
+          Program editor
+        </button>
+      <% } %>
+      <button type="button" class="button-link button-link-secondary" data-academy-modal-open="academy-modal-create-program">
+        <span class="iconify" data-icon="ph:stack-plus-bold"></span>
+        New program
+      </button>
+      <button type="button" class="button-link button-link-secondary" data-academy-modal-open="academy-modal-add-resource">
+        <span class="iconify" data-icon="ph:upload-simple-bold"></span>
+        Add resource
+      </button>
+      <a class="button-link button-link-primary" href="/h5p/studio">
+        <span class="iconify" data-icon="ph:puzzle-piece-bold"></span>
+        H5P Studio
+      </a>
+    </div>
+  </div>
+
+  <div class="panel learning-faculty-tabs" data-logbook-tabs>
+    <nav class="logbook-tab-nav" aria-label="Curriculum sections">
+      <button type="button" class="button-link" data-logbook-tab="curriculum">
+        <span>Curriculum</span>
+        <span class="tab-badge"><%= academyStats.chapters %></span>
+      </button>
+      <button type="button" class="button-link" data-logbook-tab="library">
+        <span>Library</span>
+        <span class="tab-badge"><%= totalCount %></span>
+      </button>
+      <% if (programCount > 0) { %>
+        <button type="button" class="button-link" data-logbook-tab="settings">
+          <span>Program editor</span>
+          <span class="tab-badge"><%= programCount %></span>
+        </button>
+      <% } %>
+      <% if (creatorProgram) { %>
+        <button type="button" class="button-link" data-logbook-tab="cohorts">
+          <span>Cohorts</span>
+          <span class="tab-badge"><%= cohorts.length %></span>
+        </button>
+      <% } %>
+      <% if (facultyAnalytics) { %>
+        <button type="button" class="button-link" data-logbook-tab="analytics">
+          <span>Analytics</span>
+        </button>
+      <% } %>
+    </nav>
+
+    <!-- ── CURRICULUM TAB ── -->
+    <section class="logbook-tab-panel" data-logbook-panel="curriculum">
+      <% if (programCount > 0) { %>
+        <section class="academy-program-switcher">
+          <div>
+            <p class="section-kicker">Programs</p>
+            <h2>Choose curriculum workspace</h2>
+            <p class="section-copy">Create separate programs when postgraduate, consultant, or phase-specific curricula need different structures.</p>
+          </div>
+          <div class="academy-program-tabs" role="list">
+            <% creatorPrograms.forEach((program) => { %>
+              <a
+                role="listitem"
+                class="academy-program-tab <%= selectedProgramId === program.id ? 'is-active' : '' %>"
+                href="/learning?programId=<%= program.id %>"
+              >
+                <strong><%= program.title %></strong>
+                <span><%= program.status %></span>
+              </a>
+            <% }) %>
+            <button type="button" class="academy-program-tab academy-program-tab-new" data-academy-modal-open="academy-modal-create-program">
+              <strong>New program</strong>
+              <span>Create another track</span>
+            </button>
+          </div>
+        </section>
+      <% } %>
+
+      <% if (!creatorProgram) { %>
+        <div class="academy-setup-screen">
+          <span class="iconify academy-setup-icon" data-icon="ph:stack-bold"></span>
+          <h2>Set up the academy program</h2>
+          <p class="section-copy">Create one Unit 3 academic program, then build chapters and subchapters inside it.</p>
+          <button type="button" class="button-link button-link-primary" data-academy-modal-open="academy-modal-create-program">
+            <span class="iconify" data-icon="ph:plus-circle-bold"></span>
+            Create first program
+          </button>
+        </div>
+      <% } else { %>
+        <div class="section-header">
+          <div>
+            <p class="section-kicker">Program</p>
+            <h2><%= creatorProgram.title %></h2>
+            <% if (creatorProgram.description) { %>
+              <p class="section-copy"><%= creatorProgram.description %></p>
+            <% } %>
+          </div>
+          <div class="academy-inline-actions">
+            <span class="status-pill status-<%= creatorProgram.status %>"><%= creatorProgram.status %></span>
+            <span class="pill"><%= academyStats.placedItems %> placed</span>
+            <% if (unplacedCount > 0) { %>
+              <span class="pill pill-warning"><%= unplacedCount %> unplaced</span>
+            <% } %>
+            <button type="button" class="button-link button-link-secondary" data-academy-modal-open="academy-modal-add-chapter">
+              <span class="iconify" data-icon="ph:rows-plus-bottom-bold"></span>
+              Add chapter
+            </button>
+          </div>
+        </div>
+
+        <% if (!creatorProgram.chapters.length) { %>
+          <div class="empty-state">
+            <span class="iconify" data-icon="ph:book-bookmark-bold"></span>
+            <p>No chapters yet. Use the "Add chapter" button above to build the curriculum structure.</p>
+          </div>
+        <% } %>
+
+        <div class="academy-chapter-list">
+          <% creatorProgram.chapters.forEach((chapter) => { %>
+            <article class="academy-chapter-card">
+              <div class="academy-node-header">
+                <div>
+                  <p class="section-kicker">Chapter <%= chapter.position + 1 %></p>
+                  <h3><%= chapter.title %></h3>
+                  <% if (chapter.summary) { %>
+                    <p class="section-copy"><%= chapter.summary %></p>
+                  <% } %>
+                </div>
+                <div class="academy-inline-actions">
+                  <span class="status-pill status-<%= chapter.status %>"><%= chapter.status %></span>
+                  <form action="/learning/chapters/<%= chapter.id %>/move" method="post" class="inline-form">
+                    <input type="hidden" name="direction" value="up" />
+                    <button type="submit" class="button-link button-link-secondary btn-icon-sm" aria-label="Move chapter up">
+                      <span class="iconify" data-icon="ph:arrow-up-bold"></span>
+                    </button>
+                  </form>
+                  <form action="/learning/chapters/<%= chapter.id %>/move" method="post" class="inline-form">
+                    <input type="hidden" name="direction" value="down" />
+                    <button type="submit" class="button-link button-link-secondary btn-icon-sm" aria-label="Move chapter down">
+                      <span class="iconify" data-icon="ph:arrow-down-bold"></span>
+                    </button>
+                  </form>
+                  <form action="/learning/chapters/<%= chapter.id %>/delete" method="post" class="inline-form inline-form-danger" onsubmit="return confirm('Delete this chapter and everything inside it from the roadmap?');">
+                    <button type="submit" class="button-link button-link-danger btn-icon-sm" aria-label="Delete chapter">
+                      <span class="iconify" data-icon="ph:trash-bold"></span>
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              <details class="academy-editor-disclosure">
+                <summary><span class="iconify" data-icon="ph:pencil-simple-bold"></span> Edit chapter</summary>
+                <form action="/learning/chapters/<%= chapter.id %>/update" method="post" class="stack-form academy-inline-form">
+                  <label>
+                    <span>Chapter title</span>
+                    <input type="text" name="title" required value="<%= chapter.title %>" />
+                  </label>
+                  <label>
+                    <span>Summary</span>
+                    <textarea name="summary" rows="3" placeholder="Short chapter description for learners."><%= chapter.summary %></textarea>
+                  </label>
+                  <label>
+                    <span>Status</span>
+                    <select name="status">
+                      <option value="draft" <%= chapter.status === "draft" ? "selected" : "" %>>Draft</option>
+                      <option value="published" <%= chapter.status === "published" ? "selected" : "" %>>Published</option>
+                    </select>
+                  </label>
+                  <button type="submit">Save chapter</button>
+                </form>
+              </details>
+
+              <details class="academy-editor-disclosure">
+                <summary><span class="iconify" data-icon="ph:plus-bold"></span> Add subchapter</summary>
+                <form action="/learning/chapters/<%= chapter.id %>/subchapters" method="post" class="stack-form academy-inline-form">
+                  <label>
+                    <span>Subchapter title</span>
+                    <input type="text" name="title" required placeholder="Focused topic inside this chapter" />
+                  </label>
+                  <label>
+                    <span>Summary</span>
+                    <input type="text" name="summary" placeholder="Short description for learners" />
+                  </label>
+                  <label>
+                    <span>Status</span>
+                    <select name="status">
+                      <option value="draft">Draft</option>
+                      <option value="published">Published</option>
+                    </select>
+                  </label>
+                  <button type="submit">Add subchapter</button>
+                </form>
+              </details>
+
+              <% if (!chapter.subchapters.length) { %>
+                <div class="empty-state compact-empty-state">No subchapters yet for this chapter.</div>
+              <% } %>
+
+              <div class="academy-subchapter-list">
+                <% chapter.subchapters.forEach((subchapter) => { %>
+                  <section class="academy-subchapter-card">
+                    <div class="academy-node-header">
+                      <div>
+                        <p class="section-kicker">Subchapter <%= subchapter.position + 1 %></p>
+                        <h4><%= subchapter.title %></h4>
+                        <% if (subchapter.summary) { %>
+                          <p class="section-copy"><%= subchapter.summary %></p>
+                        <% } %>
+                      </div>
+                      <div class="academy-inline-actions">
+                        <span class="status-pill status-<%= subchapter.status %>"><%= subchapter.status %></span>
+                        <form action="/learning/subchapters/<%= subchapter.id %>/move" method="post" class="inline-form">
+                          <input type="hidden" name="direction" value="up" />
+                          <button type="submit" class="button-link button-link-secondary btn-icon-sm" aria-label="Move subchapter up">
+                            <span class="iconify" data-icon="ph:arrow-up-bold"></span>
+                          </button>
+                        </form>
+                        <form action="/learning/subchapters/<%= subchapter.id %>/move" method="post" class="inline-form">
+                          <input type="hidden" name="direction" value="down" />
+                          <button type="submit" class="button-link button-link-secondary btn-icon-sm" aria-label="Move subchapter down">
+                            <span class="iconify" data-icon="ph:arrow-down-bold"></span>
+                          </button>
+                        </form>
+                        <form action="/learning/subchapters/<%= subchapter.id %>/delete" method="post" class="inline-form inline-form-danger" onsubmit="return confirm('Delete this subchapter and its placed items from the roadmap?');">
+                          <button type="submit" class="button-link button-link-danger btn-icon-sm" aria-label="Delete subchapter">
+                            <span class="iconify" data-icon="ph:trash-bold"></span>
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+
+                    <details class="academy-editor-disclosure">
+                      <summary><span class="iconify" data-icon="ph:pencil-simple-bold"></span> Edit subchapter</summary>
+                      <form action="/learning/subchapters/<%= subchapter.id %>/update" method="post" class="stack-form academy-inline-form">
+                        <label>
+                          <span>Subchapter title</span>
+                          <input type="text" name="title" required value="<%= subchapter.title %>" />
+                        </label>
+                        <label>
+                          <span>Summary</span>
+                          <textarea name="summary" rows="3" placeholder="Short description for learners."><%= subchapter.summary %></textarea>
+                        </label>
+                        <label>
+                          <span>Status</span>
+                          <select name="status">
+                            <option value="draft" <%= subchapter.status === "draft" ? "selected" : "" %>>Draft</option>
+                            <option value="published" <%= subchapter.status === "published" ? "selected" : "" %>>Published</option>
+                          </select>
+                        </label>
+                        <button type="submit">Save subchapter</button>
+                      </form>
+                    </details>
+
+                    <details class="academy-editor-disclosure">
+                      <summary><span class="iconify" data-icon="ph:plus-circle-bold"></span> Add item to subchapter</summary>
+                      <form action="/learning/subchapters/<%= subchapter.id %>/items" method="post" class="stack-form academy-inline-form">
+                        <label>
+                          <span>Resource</span>
+                          <select name="learningResourceId" required>
+                            <option value="">Choose a resource</option>
+                            <% resources.forEach((resource) => { %>
+                              <option value="<%= resource.id %>"><%= resource.title %> — <%= resource.resourceType %><%= resource.h5pContentId ? ' · H5P' : '' %></option>
+                            <% }) %>
+                          </select>
+                        </label>
+                        <label>
+                          <span>Display title override</span>
+                          <input type="text" name="titleOverride" placeholder="Optional learner-facing title" />
+                        </label>
+                        <div class="academy-form-row">
+                          <label>
+                            <span>Required</span>
+                            <select name="isRequired">
+                              <option value="true">Required</option>
+                              <option value="false">Optional</option>
+                            </select>
+                          </label>
+                          <label>
+                            <span>Type</span>
+                            <select name="isAssessment">
+                              <option value="false">Learning item</option>
+                              <option value="true">Assessment</option>
+                            </select>
+                          </label>
+                          <label>
+                            <span>Minutes</span>
+                            <input type="number" name="estimatedMinutes" min="0" step="1" value="0" />
+                          </label>
+                        </div>
+                        <button type="submit">Place in subchapter</button>
+                      </form>
+                    </details>
+
+                    <% if (!subchapter.items.length) { %>
+                      <div class="empty-state compact-empty-state">No learning items placed here yet.</div>
+                    <% } %>
+
+                    <div class="academy-item-list">
+                      <% subchapter.items.forEach((item) => { %>
+                        <article class="academy-item-card <%= item.h5pContentId ? 'is-interactive' : '' %>">
+                          <div class="academy-item-main">
+                            <strong><%= item.title %></strong>
+                            <div class="tag-row">
+                              <span class="pill"><%= item.resourceType %></span>
+                              <% if (item.h5pContentId) { %>
+                                <span class="pill pill-interactive">H5P</span>
+                              <% } %>
+                              <% if (item.isRequired) { %>
+                                <span class="pill">Required</span>
+                              <% } else { %>
+                                <span class="pill">Optional</span>
+                              <% } %>
+                              <% if (item.isAssessment) { %>
+                                <span class="pill">Assessment</span>
+                              <% } %>
+                            </div>
+                          </div>
+                          <div class="academy-item-meta">
+                            <div class="academy-inline-actions">
+                              <% if (item.estimatedMinutes) { %>
+                                <span><%= item.estimatedMinutes %> min</span>
+                              <% } %>
+                              <span class="status-pill status-<%= item.status %>"><%= item.status %></span>
+                              <form action="/learning/items/<%= item.id %>/move" method="post" class="inline-form">
+                                <input type="hidden" name="direction" value="up" />
+                                <button type="submit" class="button-link button-link-secondary btn-icon-sm" aria-label="Move item up">
+                                  <span class="iconify" data-icon="ph:arrow-up-bold"></span>
+                                </button>
+                              </form>
+                              <form action="/learning/items/<%= item.id %>/move" method="post" class="inline-form">
+                                <input type="hidden" name="direction" value="down" />
+                                <button type="submit" class="button-link button-link-secondary btn-icon-sm" aria-label="Move item down">
+                                  <span class="iconify" data-icon="ph:arrow-down-bold"></span>
+                                </button>
+                              </form>
+                              <form action="/learning/items/<%= item.id %>/delete" method="post" class="inline-form inline-form-danger" onsubmit="return confirm('Remove this item from the roadmap? The library resource itself will stay in the library.');">
+                                <button type="submit" class="button-link button-link-danger btn-icon-sm" aria-label="Remove item">
+                                  <span class="iconify" data-icon="ph:x-bold"></span>
+                                </button>
+                              </form>
+                            </div>
+                          </div>
+                          <details class="academy-editor-disclosure">
+                            <summary><span class="iconify" data-icon="ph:sliders-bold"></span> Edit placement</summary>
+                            <form action="/learning/items/<%= item.id %>/update" method="post" class="stack-form academy-inline-form">
+                              <label>
+                                <span>Display title override</span>
+                                <input type="text" name="titleOverride" value="<%= item.titleOverride ?? '' %>" placeholder="Optional learner-facing title" />
+                              </label>
+                              <label>
+                                <span>Move to subchapter</span>
+                                <select name="subchapterId">
+                                  <% creatorProgramTree.chapters.forEach((programChapter) => { %>
+                                    <% programChapter.subchapters.forEach((programSubchapter) => { %>
+                                      <option value="<%= programSubchapter.id %>" <%= programSubchapter.id === subchapter.id ? "selected" : "" %>><%= programChapter.title %> → <%= programSubchapter.title %></option>
+                                    <% }) %>
+                                  <% }) %>
+                                </select>
+                              </label>
+                              <div class="academy-form-row">
+                                <label>
+                                  <span>Required</span>
+                                  <select name="isRequired">
+                                    <option value="true" <%= item.isRequired ? "selected" : "" %>>Required</option>
+                                    <option value="false" <%= !item.isRequired ? "selected" : "" %>>Optional</option>
+                                  </select>
+                                </label>
+                                <label>
+                                  <span>Type</span>
+                                  <select name="isAssessment">
+                                    <option value="false" <%= !item.isAssessment ? "selected" : "" %>>Learning item</option>
+                                    <option value="true" <%= item.isAssessment ? "selected" : "" %>>Assessment</option>
+                                  </select>
+                                </label>
+                                <label>
+                                  <span>Minutes</span>
+                                  <input type="number" name="estimatedMinutes" min="0" step="1" value="<%= item.estimatedMinutes %>" />
+                                </label>
+                              </div>
+                              <label>
+                                <span>Status</span>
+                                <select name="status">
+                                  <option value="draft" <%= item.status === "draft" ? "selected" : "" %>>Draft</option>
+                                  <option value="published" <%= item.status === "published" ? "selected" : "" %>>Published</option>
+                                </select>
+                              </label>
+                              <button type="submit">Save item placement</button>
+                            </form>
+                          </details>
+                        </article>
+                      <% }) %>
+                    </div>
+                  </section>
+                <% }) %>
+              </div>
+            </article>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+
+    <!-- ── LIBRARY TAB ── -->
+    <section class="logbook-tab-panel" data-logbook-panel="library" hidden>
+      <div class="section-header">
+        <div>
+          <p class="section-kicker">Library inventory</p>
+          <h2>Published resources</h2>
+        </div>
+        <button type="button" class="button-link button-link-secondary" data-academy-modal-open="academy-modal-add-resource">
+          <span class="iconify" data-icon="ph:upload-simple-bold"></span>
+          Add resource
+        </button>
+      </div>
+
+      <% if (!resources.length) { %>
+        <div class="empty-state">
+          <span class="iconify" data-icon="ph:books-bold"></span>
+          <p>No learning resources published yet. Use the "Add resource" button to add the first one.</p>
+        </div>
+      <% } %>
+
+      <div class="learning-resource-list">
+        <% resources.forEach((resource) => { %>
+          <article class="learning-resource-card <%= resource.h5pContentId ? 'is-interactive' : '' %>">
+            <div class="learning-resource-card-top">
+              <div class="tag-row">
+                <% if (resource.h5pContentId) { %>
+                  <span class="pill pill-interactive">
+                    <span class="iconify" data-icon="ph:puzzle-piece-bold"></span>
+                    Interactive H5P
+                  </span>
+                <% } %>
+                <span class="pill"><%= resource.resourceType %></span>
+                <span class="status-pill status-<%= resource.status %>"><%= resource.status %></span>
+                <span class="pill"><%= resource.placementCount %> placement<%= resource.placementCount === 1 ? "" : "s" %></span>
+              </div>
+              <h3 class="learning-resource-title"><%= resource.title %></h3>
+              <% if (resource.description) { %>
+                <p class="section-copy learning-resource-desc"><%= resource.description %></p>
+              <% } %>
+            </div>
+            <div class="learning-resource-actions">
+              <% if (resource.h5pContentId) { %>
+                <a class="button-link button-link-primary" href="/api/h5p/play/<%= resource.h5pContentId %>" target="_blank" rel="noreferrer">
+                  <span class="iconify" data-icon="ph:play-bold"></span>
+                  Open activity
+                </a>
+                <a class="button-link button-link-secondary" href="/api/h5p/edit/<%= resource.h5pContentId %>" target="_blank" rel="noreferrer">
+                  <span class="iconify" data-icon="ph:pencil-simple-bold"></span>
+                  Edit in Studio
+                </a>
+                <form action="/h5p/studio/<%= resource.h5pContentId %>/delete" method="post" class="inline-form" onsubmit="return confirm('Delete this H5P item, its linked learning resource, learner progress, and xAPI history?');">
+                  <input type="hidden" name="redirectTo" value="/learning" />
+                  <button type="submit" class="button-link button-link-danger">
+                    <span class="iconify" data-icon="ph:trash-bold"></span>
+                    Delete
+                  </button>
+                </form>
+              <% } else { %>
+                <a class="button-link button-link-secondary" href="<%= resource.sourceUrl %>" target="_blank" rel="noreferrer">
+                  <span class="iconify" data-icon="ph:arrow-square-out-bold"></span>
+                  Open resource
+                </a>
+              <% } %>
+            </div>
+            <div class="learning-resource-progress">
+              <form action="/learning/<%= resource.id %>/progress" method="post" class="inline-form">
+                <select name="status">
+                  <option value="not_started">Not started</option>
+                  <option value="in_progress">In progress</option>
+                  <option value="completed">Completed</option>
+                </select>
+                <button type="submit">Update my progress</button>
+              </form>
+            </div>
+          </article>
+        <% }) %>
+      </div>
+
+      <div class="learning-studio-entry-card">
+        <div class="learning-studio-icon">
+          <span class="iconify" data-icon="ph:puzzle-piece-bold"></span>
+        </div>
+        <p class="section-kicker">Interactive content</p>
+        <h3>H5P Studio</h3>
+        <p class="section-copy">Create, import, and manage interactive H5P activities. Completed content is linked into the learning inventory automatically.</p>
+        <a class="button-link button-link-secondary" href="/h5p/studio">
+          Open H5P Studio
+          <span class="iconify" data-icon="ph:arrow-right-bold"></span>
+        </a>
+      </div>
+    </section>
+
+    <!-- ── SETTINGS TAB (only shown when program exists) ── -->
+    <% if (programCount > 0) { %>
+      <section class="logbook-tab-panel" data-logbook-panel="settings" hidden>
+        <section class="academy-program-switcher academy-program-editor-switcher">
+          <div>
+            <p class="section-kicker">Program editor</p>
+            <h2>Manage programs, publication, and access</h2>
+            <p class="section-copy">Switch between programs, create new tracks, edit the selected program, or retire a program from one full-width workspace.</p>
+          </div>
+          <div class="academy-program-tabs" role="list">
+            <% creatorPrograms.forEach((program) => { %>
+              <a
+                role="listitem"
+                class="academy-program-tab <%= selectedProgramId === program.id ? 'is-active' : '' %>"
+                href="/learning?programId=<%= program.id %>"
+              >
+                <strong><%= program.title %></strong>
+                <span><%= program.status %></span>
+              </a>
+            <% }) %>
+            <button type="button" class="academy-program-tab academy-program-tab-new" data-academy-modal-open="academy-modal-create-program">
+              <strong>New program</strong>
+              <span>Create another track</span>
+            </button>
+          </div>
+        </section>
+        <% if (creatorProgram) { %>
+        <div class="academy-settings-grid">
+
+          <div class="panel">
+            <p class="section-kicker">
+              <span class="iconify" data-icon="ph:books-bold"></span>
+              Program
+            </p>
+            <h2>Program settings</h2>
+            <p class="section-copy">Keep the live curriculum title, overview, and publication state aligned with the structure below.</p>
+            <form action="/learning/programs/<%= creatorProgram.id %>/update" method="post" class="stack-form">
+              <label>
+                <span>Program title</span>
+                <input type="text" name="title" required value="<%= creatorProgram.title %>" />
+              </label>
+              <label>
+                <span>Description</span>
+                <textarea name="description" rows="4" placeholder="Program overview for faculty and learners."><%= creatorProgram.description %></textarea>
+              </label>
+              <label>
+                <span>Status</span>
+                <select name="status">
+                  <option value="draft" <%= creatorProgram.status === "draft" ? "selected" : "" %>>Draft — hidden from learners</option>
+                  <option value="published" <%= creatorProgram.status === "published" ? "selected" : "" %>>Published — visible to learners</option>
+                </select>
+              </label>
+              <button type="submit">Save program settings</button>
+            </form>
+            <div class="academy-danger-zone">
+              <p class="section-kicker" style="color: var(--danger);">
+                <span class="iconify" data-icon="ph:warning-bold"></span>
+                Danger zone
+              </p>
+              <p class="section-copy">Deleting the program is permanent. All chapters, subchapters, curriculum placements, and access rules will be removed. Library resources are kept.</p>
+              <form action="/learning/programs/<%= creatorProgram.id %>/delete" method="post" class="inline-form" onsubmit="return confirm('Permanently delete this program and all its chapters and subchapters? Library resources will not be deleted.');">
+                <button type="submit" class="button-link button-link-danger">
+                  <span class="iconify" data-icon="ph:trash-bold"></span>
+                  Delete program
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div class="panel">
+            <p class="section-kicker">
+              <span class="iconify" data-icon="ph:users-three-bold"></span>
+              Access
+            </p>
+            <h2>Who can see this program</h2>
+            <p class="section-copy">Target the program to all learners, a role, a cohort, or a named user.</p>
+            <form action="/learning/programs/<%= creatorProgram.id %>/audiences" method="post" class="stack-form">
+              <label>
+                <span>Access scope</span>
+                <select name="accessScope">
+                  <option value="open">Open to all learners</option>
+                  <option value="role">Specific role</option>
+                  <option value="cohort">Specific cohort</option>
+                  <option value="user">Named user</option>
+                </select>
+              </label>
+              <label>
+                <span>Role</span>
+                <select name="roleKey">
+                  <option value="">Choose role</option>
+                  <% audienceRoleOptions.forEach((option) => { %>
+                    <option value="<%= option.value %>"><%= option.label %></option>
+                  <% }) %>
+                </select>
+              </label>
+              <label>
+                <span>Cohort</span>
+                <select name="cohortId">
+                  <option value="">Choose cohort</option>
+                  <% cohorts.forEach((cohort) => { %>
+                    <option value="<%= cohort.id %>"><%= cohort.title %> — <%= cohort.memberCount %> members</option>
+                  <% }) %>
+                </select>
+              </label>
+              <label>
+                <span>User</span>
+                <select name="userId">
+                  <option value="">Choose user</option>
+                  <% assignableUsers.forEach((person) => { %>
+                    <option value="<%= person.id %>"><%= person.displayName %> — <%= person.role %><%= person.designation ? ` · ${person.designation}` : '' %></option>
+                  <% }) %>
+                </select>
+              </label>
+              <button type="submit">Add access rule</button>
+            </form>
+
+            <% if (!creatorProgramAudiences.length) { %>
+              <div class="empty-state compact-empty-state">No audience rules yet. Published programs without rules are visible to all learners.</div>
+            <% } else { %>
+              <div class="academy-analytics-list">
+                <% creatorProgramAudiences.forEach((audience) => { %>
+                  <article class="academy-analytics-row">
+                    <div>
+                      <strong><%= audience.label %></strong>
+                      <p class="section-copy">Scope: <%= audience.accessScope %></p>
+                    </div>
+                    <form action="/learning/program-audiences/<%= audience.id %>/remove" method="post" class="inline-form">
+                      <button type="submit" class="button-link button-link-danger">Remove</button>
+                    </form>
+                  </article>
+                <% }) %>
+              </div>
+            <% } %>
+          </div>
+
+          <% if (creatorProgramTree && creatorProgramTree.chapters.length) { %>
+            <div class="panel">
+              <p class="section-kicker">
+                <span class="iconify" data-icon="ph:link-bold"></span>
+                Not yet in curriculum
+              </p>
+              <p class="section-copy">These resources are in the library but not yet placed into any subchapter.</p>
+              <% if (!unplacedResources.length) { %>
+                <div class="empty-state compact-empty-state">All resources have been placed into the academy.</div>
+              <% } else { %>
+                <div class="academy-unplaced-list">
+                  <% unplacedResources.forEach((resource) => { %>
+                    <article class="academy-unplaced-card">
+                      <strong><%= resource.title %></strong>
+                      <div class="tag-row">
+                        <span class="pill"><%= resource.resourceType %></span>
+                        <% if (resource.h5pContentId) { %>
+                          <span class="pill pill-interactive">H5P</span>
+                        <% } %>
+                      </div>
+                    </article>
+                  <% }) %>
+                </div>
+              <% } %>
+            </div>
+          <% } %>
+        </div>
+        <% } %>
+      </section>
+
+      <!-- ── COHORTS TAB ── -->
+      <section class="logbook-tab-panel" data-logbook-panel="cohorts" hidden>
+        <div class="section-header">
+          <div>
+            <p class="section-kicker">Learner groups</p>
+            <h2>Cohorts</h2>
+          </div>
+          <button type="button" class="button-link button-link-secondary" data-academy-modal-open="academy-modal-add-cohort">
+            <span class="iconify" data-icon="ph:user-plus-bold"></span>
+            Create cohort
+          </button>
+        </div>
+
+        <% if (!cohorts.length) { %>
+          <div class="empty-state">
+            <span class="iconify" data-icon="ph:users-bold"></span>
+            <p>No cohorts created yet. Cohorts let you assign the same curriculum to groups of learners.</p>
+          </div>
+        <% } else { %>
+          <div class="academy-cohort-grid">
+            <% cohorts.forEach((cohort) => { %>
+              <section class="panel academy-cohort-card">
+                <div class="section-header">
+                  <div>
+                    <h3><%= cohort.title %></h3>
+                    <p class="section-copy"><%= cohort.description || "No description." %></p>
+                  </div>
+                  <span class="pill"><%= cohort.memberCount %> members</span>
+                </div>
+                <form action="/learning/cohorts/<%= cohort.id %>/members" method="post" class="stack-form academy-inline-form">
+                  <label>
+                    <span>Add member</span>
+                    <select name="userId" required>
+                      <option value="">Choose user</option>
+                      <% assignableUsers.forEach((person) => { %>
+                        <option value="<%= person.id %>"><%= person.displayName %> — <%= person.role %><%= person.designation ? ` · ${person.designation}` : '' %></option>
+                      <% }) %>
+                    </select>
+                  </label>
+                  <button type="submit">Add to cohort</button>
+                </form>
+                <% if (!cohort.members.length) { %>
+                  <div class="empty-state compact-empty-state">No members in this cohort yet.</div>
+                <% } else { %>
+                  <div class="academy-analytics-list">
+                    <% cohort.members.forEach((member) => { %>
+                      <article class="academy-analytics-row">
+                        <div>
+                          <strong><%= member.displayName %></strong>
+                          <p class="section-copy"><%= member.role %><%= member.designation ? ` · ${member.designation}` : '' %></p>
+                        </div>
+                        <form action="/learning/cohorts/<%= cohort.id %>/members/<%= member.userId %>/remove" method="post" class="inline-form">
+                          <button type="submit" class="button-link button-link-danger">Remove</button>
+                        </form>
+                      </article>
+                    <% }) %>
+                  </div>
+                <% } %>
+              </section>
+            <% }) %>
+          </div>
+        <% } %>
+      </section>
+    <% } %>
+
+    <!-- ── ANALYTICS TAB ── -->
+    <% if (facultyAnalytics) { %>
+      <section class="logbook-tab-panel" data-logbook-panel="analytics" hidden>
+        <div class="learning-stats-ribbon" style="margin-bottom: 1.5rem;">
+          <div class="learning-stat">
+            <strong><%= facultyAnalytics.trackedLearners %></strong>
+            <span>Learners tracked</span>
+          </div>
+          <div class="learning-stat learning-stat-accent">
+            <strong><%= facultyAnalytics.totalAttempts %></strong>
+            <span>Total attempts</span>
+          </div>
+          <div class="learning-stat learning-stat-success">
+            <strong><%= facultyAnalytics.completedItems %></strong>
+            <span>Completed items</span>
+          </div>
+          <div class="learning-stat">
+            <strong><%= facultyAnalytics.passedAssessments %></strong>
+            <span>Passed</span>
+          </div>
+          <div class="learning-stat">
+            <strong><%= facultyAnalytics.averageBestScore === null ? "—" : `${Math.round(facultyAnalytics.averageBestScore * 100)}%` %></strong>
+            <span>Avg best score</span>
+          </div>
+        </div>
+        <div class="academy-analytics-grid">
+          <section class="panel academy-analytics-card">
+            <h3>Learner momentum</h3>
+            <% if (!facultyAnalytics.learnerRows.length) { %>
+              <div class="empty-state compact-empty-state">Assessment data will appear here once learners start interacting with roadmap items.</div>
+            <% } else { %>
+              <div class="academy-analytics-list">
+                <% facultyAnalytics.learnerRows.forEach((row) => { %>
+                  <article class="academy-analytics-row">
+                    <div>
+                      <strong><%= row.name %></strong>
+                      <p class="section-copy"><%= row.completedItems %>/<%= row.trackedItems %> items completed · <%= row.passedAssessments %> assessment passes</p>
+                    </div>
+                    <div class="academy-item-meta">
+                      <span><%= row.averageBestScore === null ? "No score yet" : `${Math.round(row.averageBestScore * 100)}% best` %></span>
+                    </div>
+                  </article>
+                <% }) %>
+              </div>
+            <% } %>
+          </section>
+          <section class="panel academy-analytics-card">
+            <h3>Chapter performance</h3>
+            <% if (!facultyAnalytics.chapterRows.length) { %>
+              <div class="empty-state compact-empty-state">Chapter analytics unlock as soon as items are placed into the academy.</div>
+            <% } else { %>
+              <div class="academy-analytics-list">
+                <% facultyAnalytics.chapterRows.forEach((row) => { %>
+                  <article class="academy-analytics-row">
+                    <div>
+                      <strong><%= row.title %></strong>
+                      <p class="section-copy"><%= row.placedItems %> placed items · <%= row.learnersStarted %> learners started</p>
+                    </div>
+                    <div class="academy-item-meta">
+                      <span><%= row.averageBestScore === null ? "No score yet" : `${Math.round(row.averageBestScore * 100)}% best` %></span>
+                    </div>
+                  </article>
+                <% }) %>
+              </div>
+            <% } %>
+          </section>
+        </div>
+      </section>
+    <% } %>
+  </div><!-- .panel .learning-faculty-tabs -->
+
+  <!-- ── MODALS ── -->
+
+  <!-- Create program modal -->
+  <div class="academy-modal-overlay" id="academy-modal-create-program" hidden>
+      <div class="academy-modal-box">
+        <button type="button" class="academy-modal-close" data-academy-modal-close aria-label="Close">
+          <span class="iconify" data-icon="ph:x-bold"></span>
+        </button>
+        <p class="section-kicker">
+          <span class="iconify" data-icon="ph:stack-plus-bold"></span>
+          Academy setup
+        </p>
+        <h2><%= programCount > 0 ? "Create new program" : "Create the first program" %></h2>
+        <p class="section-copy">Use programs for distinct learning tracks, academic years, consultant pathways, or postgraduate cohorts.</p>
+        <form action="/learning/programs" method="post" class="stack-form">
+          <label>
+            <span>Program title</span>
+            <input type="text" name="title" required placeholder="Unit 3 Learning Academy" />
+          </label>
+          <label>
+            <span>Description</span>
+            <textarea name="description" rows="4" placeholder="Structured learning pathway for postgraduate academic development."></textarea>
+          </label>
+          <label>
+            <span>Status</span>
+            <select name="status">
+              <option value="draft">Draft — hidden from learners</option>
+              <option value="published">Published — visible to learners</option>
+            </select>
+          </label>
+          <button type="submit">Create academy program</button>
+        </form>
+      </div>
+    </div>
+
+  <!-- Add chapter modal -->
+  <% if (creatorProgram) { %>
+    <div class="academy-modal-overlay" id="academy-modal-add-chapter" hidden>
+      <div class="academy-modal-box">
+        <button type="button" class="academy-modal-close" data-academy-modal-close aria-label="Close">
+          <span class="iconify" data-icon="ph:x-bold"></span>
+        </button>
+        <p class="section-kicker">
+          <span class="iconify" data-icon="ph:rows-plus-bottom-bold"></span>
+          Curriculum
+        </p>
+        <h2>Add chapter</h2>
+        <form action="/learning/programs/<%= creatorProgram.id %>/chapters" method="post" class="stack-form">
+          <label>
+            <span>Chapter title</span>
+            <input type="text" name="title" required placeholder="e.g. Airway Management" />
+          </label>
+          <label>
+            <span>Summary</span>
+            <textarea name="summary" rows="3" placeholder="Broad academic section for related topics."></textarea>
+          </label>
+          <label>
+            <span>Status</span>
+            <select name="status">
+              <option value="draft">Draft — hidden from learners</option>
+              <option value="published">Published — visible to learners</option>
+            </select>
+          </label>
+          <button type="submit">Add chapter</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Add cohort modal -->
+    <div class="academy-modal-overlay" id="academy-modal-add-cohort" hidden>
+      <div class="academy-modal-box">
+        <button type="button" class="academy-modal-close" data-academy-modal-close aria-label="Close">
+          <span class="iconify" data-icon="ph:x-bold"></span>
+        </button>
+        <p class="section-kicker">
+          <span class="iconify" data-icon="ph:user-list-bold"></span>
+          Cohorts
+        </p>
+        <h2>Create cohort</h2>
+        <form action="/learning/cohorts" method="post" class="stack-form">
+          <label>
+            <span>Cohort title</span>
+            <input type="text" name="title" required placeholder="Year 1 Postgraduates" />
+          </label>
+          <label>
+            <span>Audience type</span>
+            <select name="audienceKind">
+              <option value="postgraduate">Postgraduate</option>
+              <option value="consultant">Consultant</option>
+              <option value="mixed">Mixed</option>
+            </select>
+          </label>
+          <label>
+            <span>Description</span>
+            <input type="text" name="description" placeholder="Learners or consultants who should receive the same curriculum." />
+          </label>
+          <input type="hidden" name="status" value="active" />
+          <button type="submit">Create cohort</button>
+        </form>
+      </div>
+    </div>
+  <% } %>
+
+  <!-- Add resource modal -->
+  <div class="academy-modal-overlay" id="academy-modal-add-resource" hidden>
+    <div class="academy-modal-box">
+      <button type="button" class="academy-modal-close" data-academy-modal-close aria-label="Close">
+        <span class="iconify" data-icon="ph:x-bold"></span>
+      </button>
+      <p class="section-kicker">
+        <span class="iconify" data-icon="ph:upload-simple-bold"></span>
+        Library
+      </p>
+      <h2>Add resource to library</h2>
+      <p class="section-copy">Publish an external article, video, or course link into the shared learning library.</p>
+      <form action="/learning" method="post" class="stack-form">
+        <label>
+          <span>Title</span>
+          <input type="text" name="title" required placeholder="e.g. Airway Management Review" />
+        </label>
+        <label>
+          <span>Type</span>
+          <input type="text" name="resourceType" placeholder="Article, Video, Course" required />
+        </label>
+        <label>
+          <span>URL</span>
+          <input type="url" name="url" required placeholder="https://" />
+        </label>
+        <button type="submit">
+          <span class="iconify" data-icon="ph:upload-simple-bold"></span>
+          Publish resource
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      function openModal(id) {
+        var m = document.getElementById(id);
+        if (m) { m.hidden = false; document.body.classList.add('modal-open'); }
+      }
+      function closeModal(overlay) {
+        overlay.hidden = true;
+        document.body.classList.remove('modal-open');
+      }
+      document.querySelectorAll('[data-academy-modal-open]').forEach(function (btn) {
+        btn.addEventListener('click', function () { openModal(btn.dataset.academyModalOpen); });
+      });
+      document.querySelectorAll('[data-academy-modal-close]').forEach(function (btn) {
+        btn.addEventListener('click', function () { closeModal(btn.closest('.academy-modal-overlay')); });
+      });
+      document.querySelectorAll('.academy-modal-overlay').forEach(function (overlay) {
+        overlay.addEventListener('click', function (e) {
+          if (e.target === overlay) { closeModal(overlay); }
+        });
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          document.querySelectorAll('.academy-modal-overlay:not([hidden])').forEach(function (overlay) {
+            closeModal(overlay);
+          });
+        }
+      });
+    })();
+  </script>
+
+<% } else { %>
+
+  <!-- ── LEARNER VIEW ── -->
+  <div class="learning-learner-hero">
+    <div class="learning-learner-hero-text">
+      <p class="eyebrow">Learning Academy</p>
+      <h1>Your Learning Roadmap</h1>
+      <p class="section-copy">Work through the curriculum chapter by chapter. Your progress is saved as you go.</p>
+    </div>
+    <% if (learnerAnalytics) { %>
+      <div class="learning-stats-ribbon learning-learner-stats">
+        <div class="learning-stat">
+          <strong><%= learnerAnalytics.totalRoadmapItems %></strong>
+          <span>Total items</span>
+        </div>
+        <div class="learning-stat learning-stat-accent">
+          <strong><%= learnerAnalytics.startedItems %></strong>
+          <span>Started</span>
+        </div>
+        <div class="learning-stat learning-stat-success">
+          <strong><%= learnerAnalytics.completedItems %></strong>
+          <span>Completed</span>
+        </div>
+        <div class="learning-stat">
+          <strong><%= learnerAnalytics.passedAssessments %></strong>
+          <span>Assessments passed</span>
+        </div>
+        <% if (learnerAnalytics.averageBestScore !== null) { %>
+          <div class="learning-stat learning-stat-accent">
+            <strong><%= Math.round(learnerAnalytics.averageBestScore * 100) %>%</strong>
+            <span>Average best score</span>
+          </div>
+        <% } %>
+      </div>
+    <% } %>
+  </div>
+
+  <% if (learnerProgramTrees.length) { %>
+    <div class="academy-roadmap">
+      <% learnerProgramTrees.forEach((learnerProgramTree) => { %>
+        <section class="academy-roadmap panel">
+          <div class="academy-structure-header">
+            <div>
+              <p class="section-kicker">Program</p>
+              <h2><%= learnerProgramTree.title %></h2>
+              <p class="section-copy"><%= learnerProgramTree.description || "Structured academic pathway for Unit 3 learners." %></p>
+            </div>
+          </div>
+
+          <div class="academy-chapter-list">
+            <% learnerProgramTree.chapters.forEach((chapter) => { %>
+              <article class="academy-chapter-card">
+                <div class="academy-node-header">
+                  <div>
+                    <p class="section-kicker">Chapter <%= chapter.position + 1 %></p>
+                    <h3><%= chapter.title %></h3>
+                    <% if (chapter.summary) { %>
+                      <p class="section-copy"><%= chapter.summary %></p>
+                    <% } %>
+                  </div>
+                </div>
+                <div class="academy-subchapter-list">
+                  <% chapter.subchapters.forEach((subchapter) => { %>
+                    <section class="academy-subchapter-card">
+                      <div class="academy-node-header">
+                        <div>
+                          <p class="section-kicker">Subchapter <%= subchapter.position + 1 %></p>
+                          <h4><%= subchapter.title %></h4>
+                          <% if (subchapter.summary) { %>
+                            <p class="section-copy"><%= subchapter.summary %></p>
+                          <% } %>
+                        </div>
+                      </div>
+                      <div class="academy-item-list">
+                        <% subchapter.items.forEach((item) => { %>
+                          <article class="academy-item-card <%= item.h5pContentId ? 'is-interactive' : '' %>">
+                            <div class="academy-item-main">
+                              <strong><%= item.title %></strong>
+                              <div class="tag-row">
+                                <span class="pill"><%= item.h5pContentId ? "Interactive" : item.resourceType %></span>
+                                <% if (item.h5pContentId) { %>
+                                  <span class="pill pill-interactive">Interactive activity</span>
+                                <% } %>
+                                <% if (item.isRequired) { %>
+                                  <span class="pill">Required</span>
+                                <% } else { %>
+                                  <span class="pill">Optional</span>
+                                <% } %>
+                                <% if (item.isAssessment) { %>
+                                  <span class="pill">Assessment</span>
+                                <% } %>
+                                <% if (item.learnerStatus) { %>
+                                  <span class="status-pill status-<%= item.learnerStatus %>"><%= item.learnerStatus.replace("_", " ") %></span>
+                                <% } %>
+                              </div>
+                            </div>
+                            <div class="academy-item-meta">
+                              <% if (item.learnerAttemptCount) { %>
+                                <span class="academy-item-meta-chip">
+                                  <span class="iconify" data-icon="ph:repeat-bold"></span>
+                                  <%= item.learnerAttemptCount %> attempt<%= item.learnerAttemptCount === 1 ? "" : "s" %>
+                                </span>
+                              <% } %>
+                              <% if (item.learnerBestScoreScaled !== null) { %>
+                                <span class="academy-score-badge academy-score-badge-<%= item.learnerBestScoreScaled >= 0.8 ? 'high' : item.learnerBestScoreScaled >= 0.5 ? 'mid' : 'low' %>">
+                                  <span class="iconify" data-icon="ph:chart-bar-bold"></span>
+                                  <%= Math.round(item.learnerBestScoreScaled * 100) %>% best
+                                </span>
+                              <% } %>
+                            </div>
+                            <div class="learning-resource-actions">
+                              <% if (item.h5pContentId) { %>
+                                <a class="button-link button-link-primary" href="/api/h5p/play/<%= item.h5pContentId %>?academyItemId=<%= item.id %>" target="_blank" rel="noreferrer">
+                                  <span class="iconify" data-icon="ph:play-bold"></span>
+                                  Open activity
+                                </a>
+                              <% } else { %>
+                                <a class="button-link button-link-secondary" href="<%= item.sourceUrl %>" target="_blank" rel="noreferrer">
+                                  <span class="iconify" data-icon="ph:arrow-square-out-bold"></span>
+                                  Open resource
+                                </a>
+                              <% } %>
+                            </div>
+                            <div class="learning-resource-progress">
+                              <form action="/learning/items/<%= item.id %>/progress" method="post" class="inline-form">
+                                <select name="status">
+                                  <option value="not_started" <%= (item.learnerStatus ?? "not_started") === "not_started" ? "selected" : "" %>>Not started</option>
+                                  <option value="in_progress" <%= item.learnerStatus === "in_progress" ? "selected" : "" %>>In progress</option>
+                                  <option value="completed" <%= item.learnerStatus === "completed" ? "selected" : "" %>>Completed</option>
+                                </select>
+                                <button type="submit">Update progress</button>
+                              </form>
+                            </div>
+                          </article>
+                        <% }) %>
+                      </div>
+                    </section>
+                  <% }) %>
+                </div>
+              </article>
+            <% }) %>
+          </div>
+        </section>
+      <% }) %>
+    </div>
+  <% } else if (!resources.length) { %>
+    <div class="empty-state">No learning resources published yet.</div>
+  <% } else { %>
+    <div class="callout">
+      <span class="iconify" data-icon="ph:books-bold"></span>
+      <div>
+        <strong>Curriculum not yet published for your group</strong>
+        <p class="section-copy">A structured roadmap will appear here once faculty publish one for your access group. Until then, you can browse and track progress through the full resource library below.</p>
+      </div>
+    </div>
+    <div class="learning-resource-list learning-resource-list-learner">
+      <% resources.forEach((resource) => { %>
+        <article class="learning-resource-card <%= resource.h5pContentId ? 'is-interactive' : '' %>">
+          <div class="learning-resource-card-top">
+            <div class="tag-row">
+              <% if (resource.h5pContentId) { %>
+                <span class="pill pill-interactive">
+                  <span class="iconify" data-icon="ph:puzzle-piece-bold"></span>
+                  Interactive
+                </span>
+              <% } %>
+              <span class="pill"><%= resource.h5pContentId ? "Interactive" : resource.resourceType %></span>
+              <span class="status-pill status-<%= resource.status %>"><%= resource.status %></span>
+            </div>
+            <h3 class="learning-resource-title"><%= resource.title %></h3>
+            <% if (resource.description) { %>
+              <p class="section-copy learning-resource-desc"><%= resource.description %></p>
+            <% } %>
+          </div>
+          <div class="learning-resource-actions">
+            <% if (resource.h5pContentId) { %>
+              <a class="button-link button-link-primary" href="/api/h5p/play/<%= resource.h5pContentId %>" target="_blank" rel="noreferrer">
+                <span class="iconify" data-icon="ph:play-bold"></span>
+                Open activity
+              </a>
+            <% } else { %>
+              <a class="button-link button-link-secondary" href="<%= resource.sourceUrl %>" target="_blank" rel="noreferrer">
+                <span class="iconify" data-icon="ph:arrow-square-out-bold"></span>
+                Open resource
+              </a>
+            <% } %>
+          </div>
+          <div class="learning-resource-progress">
+            <form action="/learning/<%= resource.id %>/progress" method="post" class="inline-form">
+              <select name="status">
+                <option value="not_started">Not started</option>
+                <option value="in_progress">In progress</option>
+                <option value="completed">Completed</option>
+              </select>
+              <button type="submit">Update progress</button>
+            </form>
+          </div>
+        </article>
+      <% }) %>
+    </div>
+  <% } %>
+<% } %>
+
+<%- include("../partials/footer") %>

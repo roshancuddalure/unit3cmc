@@ -1,0 +1,131 @@
+<%- include("../partials/header", { title, currentUser, flash }) %>
+<section class="grid-two">
+  <section class="panel">
+    <% if (!document) { %>
+      <h1>Document not found</h1>
+      <p>This SOP record does not exist.</p>
+    <% } else { %>
+      <p class="eyebrow">SOP Detail</p>
+      <h1><%= document.title %></h1>
+      <% if (document.subtitle) { %>
+        <p class="section-copy"><%= document.subtitle %></p>
+      <% } %>
+      <div class="tag-row">
+        <span class="pill"><%= document.category %></span>
+        <% if (document.scopeArea) { %>
+          <span class="pill"><%= document.scopeArea %></span>
+        <% } %>
+        <span class="status-pill status-<%= document.status %>"><%= document.status %></span>
+        <span class="pill">Current version <%= document.latestVersion %></span>
+      </div>
+      <p class="meta-text">Last updated: <%= document.updatedAt %></p>
+      <% if (document.effectiveDate) { %>
+        <p class="meta-text">Effective date: <%= document.effectiveDate %></p>
+      <% } %>
+      <% if (document.reviewDueDate) { %>
+        <p class="meta-text">Review due: <%= document.reviewDueDate %></p>
+      <% } %>
+
+      <% if (currentVersion) { %>
+        <div class="callout">
+          <p class="section-kicker">Current SOP content</p>
+          <pre class="sop-content"><%= currentVersion.contentHtml %></pre>
+        </div>
+      <% } %>
+    <% } %>
+  </section>
+
+  <section class="panel">
+    <div class="section-header">
+      <div>
+        <p class="section-kicker">Workflow actions</p>
+        <h2>Review and revise</h2>
+      </div>
+    </div>
+
+    <% if (canManage && document) { %>
+      <form action="/documents/<%= document.id %>/versions" method="post" enctype="multipart/form-data" class="stack-form">
+        <label><span>Version note</span><input type="text" name="versionNotes" required /></label>
+        <label><span>Change summary</span><textarea name="changeSummary" rows="3"></textarea></label>
+        <label><span>Revised SOP content</span><textarea name="contentHtml" rows="10" required><%= currentVersion?.contentHtml ?? "" %></textarea></label>
+        <label><span>Optional attachment</span><input type="file" name="documentFile" /></label>
+        <div class="inline-form">
+          <button type="submit" name="action" value="save_draft">Save draft revision</button>
+          <button type="submit" name="action" value="submit_review">Submit revision for review</button>
+        </div>
+      </form>
+    <% } %>
+
+    <% if (canReview && document) { %>
+      <form action="/documents/<%= document.id %>/review" method="post" class="stack-form">
+        <label>
+          <span>Workflow decision</span>
+          <select name="decision">
+            <option value="changes_requested">Request changes</option>
+            <option value="approved">Approve</option>
+            <% if (canPublish) { %>
+              <option value="published">Publish</option>
+              <option value="archived">Archive</option>
+            <% } %>
+          </select>
+        </label>
+        <label><span>Comments</span><textarea name="comments" rows="4" placeholder="Review notes, requested changes, or publication rationale"></textarea></label>
+        <button type="submit">Record workflow decision</button>
+      </form>
+    <% } %>
+  </section>
+</section>
+
+<section class="grid-two">
+  <section class="panel">
+    <p class="section-kicker">Version history</p>
+    <h2>Revision trail</h2>
+    <% if (!versions.length) { %>
+      <div class="empty-state">No versions recorded yet.</div>
+    <% } %>
+    <% versions.forEach((version) => { %>
+      <article class="list-card">
+        <strong>Version <%= version.versionNumber %></strong>
+        <div class="tag-row">
+          <span class="pill"><%= version.originalFileName %></span>
+          <span class="pill"><%= version.createdAt %></span>
+          <% if (version.submittedForReviewAt) { %>
+            <span class="pill">Submitted <%= version.submittedForReviewAt %></span>
+          <% } %>
+          <% if (version.approvedAt) { %>
+            <span class="pill">Approved <%= version.approvedAt %></span>
+          <% } %>
+        </div>
+        <% if (version.versionNotes) { %>
+          <p><strong>Version note:</strong> <%= version.versionNotes %></p>
+        <% } %>
+        <% if (version.changeSummary) { %>
+          <p><strong>Change summary:</strong> <%= version.changeSummary %></p>
+        <% } %>
+      </article>
+    <% }) %>
+  </section>
+
+  <section class="panel">
+    <p class="section-kicker">Review history</p>
+    <h2>Workflow events</h2>
+    <% if (!reviewEvents.length) { %>
+      <div class="empty-state">No review events recorded yet.</div>
+    <% } %>
+    <% reviewEvents.forEach((event) => { %>
+      <article class="list-card">
+        <strong><%= event.decision %></strong>
+        <div class="tag-row">
+          <% if (event.actorName) { %>
+            <span class="pill"><%= event.actorName %></span>
+          <% } %>
+          <span class="pill"><%= event.createdAt %></span>
+        </div>
+        <% if (event.comments) { %>
+          <p><%= event.comments %></p>
+        <% } %>
+      </article>
+    <% }) %>
+  </section>
+</section>
+<%- include("../partials/footer") %>

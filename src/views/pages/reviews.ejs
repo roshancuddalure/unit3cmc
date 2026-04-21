@@ -1,0 +1,76 @@
+<%
+  const pretty = (value) =>
+    String(value || "")
+      .split("_")
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+%>
+<%- include("../partials/header", { title, currentUser, flash }) %>
+<section class="panel">
+  <p class="eyebrow">Weekly reviews</p>
+  <h1>Faculty review and sign-off workflow</h1>
+  <p class="section-copy">
+    Each weekly submission now pulls from the de-identified clinical logbook, so reviewers can see case volume, case mix, supervision mix, and flagged safety events before approving or returning the report.
+  </p>
+  <% if (!submissions.length) { %>
+    <div class="empty-state">No weekly submissions yet. Submitted trainee summaries will appear here for approval or return.</div>
+  <% } %>
+  <div class="table-like">
+    <% submissions.forEach((submission) => { %>
+      <article class="list-card">
+        <strong><%= submission.traineeName %></strong>
+        <div class="tag-row">
+          <span class="pill"><%= submission.weekStartDate %> to <%= submission.weekEndDate %></span>
+          <span class="status-pill status-<%= submission.status %>"><%= submission.status %></span>
+          <span class="pill"><%= submission.summary.totalCases %> cases</span>
+          <span class="pill"><%= submission.summary.domainCoverage %> domains</span>
+        </div>
+
+        <p class="section-copy"><%= submission.analysisNarrative %></p>
+
+        <div class="metrics-board">
+          <article class="metric-cluster">
+            <h3>Domain mix</h3>
+            <% submission.summary.domainMix.forEach((item) => { %>
+              <div class="metric-row"><span><%= pretty(item.label) %></span><strong><%= item.count %></strong></div>
+            <% }) %>
+          </article>
+          <article class="metric-cluster">
+            <h3>Supervision mix</h3>
+            <% submission.summary.supervisionMix.forEach((item) => { %>
+              <div class="metric-row"><span><%= pretty(item.label) %></span><strong><%= item.count %></strong></div>
+            <% }) %>
+          </article>
+          <article class="metric-cluster">
+            <h3>Technique mix</h3>
+            <% submission.summary.techniqueMix.forEach((item) => { %>
+              <div class="metric-row"><span><%= pretty(item.label) %></span><strong><%= item.count %></strong></div>
+            <% }) %>
+          </article>
+        </div>
+
+        <% if (submission.reviewerComments) { %>
+          <p class="meta-text">Latest reviewer note: <%= submission.reviewerComments %></p>
+        <% } %>
+
+        <div class="inline-actions">
+          <a class="button-link button-link-secondary" href="/logbook/print?mode=team&memberId=<%= submission.userId %>&periodStart=<%= submission.weekStartDate %>&periodEnd=<%= submission.weekEndDate %>" target="_blank" rel="noreferrer">Print weekly report</a>
+        </div>
+
+        <form action="/reviews/<%= submission.id %>/decision" method="post" class="stack-form">
+          <label>
+            <span>Decision</span>
+            <select name="decision">
+              <option value="approved">Approve</option>
+              <option value="returned">Return for correction</option>
+            </select>
+          </label>
+          <label><span>Comments</span><textarea name="comments" rows="3" placeholder="Guide the trainee on case mix, gaps, or follow-up action."></textarea></label>
+          <button type="submit">Save decision</button>
+        </form>
+      </article>
+    <% }) %>
+  </div>
+</section>
+<%- include("../partials/footer") %>

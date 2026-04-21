@@ -1,0 +1,270 @@
+<%- include("../partials/header", { title, currentUser, flash }) %>
+
+<section class="panel">
+  <p class="eyebrow">Administration</p>
+  <h1>User access and account status</h1>
+  <p class="section-copy">
+    Review pending registrations, activate approved users, and manage account status across the unit.
+  </p>
+</section>
+
+<section class="quick-stat-ribbon">
+  <article class="quick-stat-chip">
+    <span>Pending</span>
+    <strong><%= peopleByStatus.pending.length %></strong>
+  </article>
+  <article class="quick-stat-chip">
+    <span>Active</span>
+    <strong><%= peopleByStatus.active.length %></strong>
+  </article>
+  <article class="quick-stat-chip">
+    <span>Suspended</span>
+    <strong><%= peopleByStatus.suspended.length %></strong>
+  </article>
+  <article class="quick-stat-chip">
+    <span>Archived</span>
+    <strong><%= peopleByStatus.archived.length %></strong>
+  </article>
+</section>
+
+<section class="panel admin-tab-shell" data-admin-tabs>
+  <div class="section-header">
+    <div>
+      <p class="section-kicker">User sections</p>
+      <h2>Choose one account group at a time</h2>
+    </div>
+  </div>
+
+  <nav class="logbook-tab-nav" aria-label="User management sections">
+    <button type="button" class="button-link" data-admin-tab="pending">
+      <span>Pending approvals</span>
+      <span class="tab-badge"><%= tabBadges.pending %></span>
+    </button>
+    <button type="button" class="button-link" data-admin-tab="active">
+      <span>Active accounts</span>
+      <span class="tab-badge"><%= tabBadges.active %></span>
+    </button>
+    <button type="button" class="button-link" data-admin-tab="suspended">
+      <span>Suspended accounts</span>
+      <span class="tab-badge"><%= tabBadges.suspended %></span>
+    </button>
+    <button type="button" class="button-link" data-admin-tab="archived">
+      <span>Archived accounts</span>
+      <span class="tab-badge"><%= tabBadges.archived %></span>
+    </button>
+    <button type="button" class="button-link" data-admin-tab="profile-requests">
+      <span>Profile requests</span>
+      <span class="tab-badge<%= Number(tabBadges.profileRequests) > 0 ? ' tab-badge-urgent' : '' %>"><%= tabBadges.profileRequests %></span>
+    </button>
+  </nav>
+
+  <section class="logbook-tab-panel" data-admin-panel="pending">
+    <div class="section-header">
+      <div>
+        <p class="section-kicker">Pending approvals</p>
+        <h2>Accounts waiting for activation</h2>
+      </div>
+      <span class="pill"><%= peopleByStatus.pending.length %> pending</span>
+    </div>
+    <% if (!peopleByStatus.pending.length) { %>
+      <div class="empty-state">No pending registrations at the moment.</div>
+    <% } %>
+    <div class="table-like">
+      <% peopleByStatus.pending.forEach((person) => { %>
+        <article class="list-card">
+          <strong><a href="/admin/users/<%= person.id %>"><%= person.display_name ?? person.name %></a></strong>
+          <div class="tag-row">
+            <span class="pill"><%= person.username %></span>
+            <span class="pill"><%= person.email %></span>
+            <span class="pill"><%= person.role_name %></span>
+            <span class="status-pill"><%= person.status %></span>
+          </div>
+          <p class="meta-text">Registered: <%= person.created_at %></p>
+          <div class="admin-action-row">
+            <form action="/admin/users/<%= person.id %>/status" method="post">
+              <input type="hidden" name="status" value="active" />
+              <button type="submit">Approve and activate</button>
+            </form>
+            <form action="/admin/users/<%= person.id %>/status" method="post">
+              <input type="hidden" name="status" value="archived" />
+              <button type="submit" class="button-link button-link-secondary">Archive request</button>
+            </form>
+          </div>
+          <form action="/admin/users/<%= person.id %>/role" method="post" class="inline-form compact-form">
+            <select name="roleKey">
+              <% roles.forEach((role) => { %>
+                <option value="<%= role.key %>" <%= person.role_key === role.key ? "selected" : "" %>><%= role.name %></option>
+              <% }) %>
+            </select>
+            <button type="submit" class="button-link button-link-secondary">Update role</button>
+          </form>
+        </article>
+      <% }) %>
+    </div>
+  </section>
+
+  <section class="logbook-tab-panel" data-admin-panel="active">
+    <div class="section-header">
+      <div>
+        <p class="section-kicker">Active accounts</p>
+        <h2>Current users</h2>
+      </div>
+      <span class="pill"><%= peopleByStatus.active.length %> active</span>
+    </div>
+    <% if (!peopleByStatus.active.length) { %>
+      <div class="empty-state">No active users found.</div>
+    <% } %>
+    <div class="table-like">
+      <% peopleByStatus.active.forEach((person) => { %>
+        <article class="list-card">
+          <strong><a href="/admin/users/<%= person.id %>"><%= person.display_name ?? person.name %></a></strong>
+          <div class="tag-row">
+            <span class="pill"><%= person.username %></span>
+            <span class="pill"><%= person.email %></span>
+            <span class="pill"><%= person.role_name %></span>
+            <span class="status-pill status-approved"><%= person.status %></span>
+          </div>
+          <% if (person.approved_at) { %>
+            <p class="meta-text">Activated: <%= person.approved_at %></p>
+          <% } %>
+          <div class="admin-action-row">
+            <form action="/admin/users/<%= person.id %>/status" method="post">
+              <input type="hidden" name="status" value="suspended" />
+              <button type="submit" class="button-link button-link-secondary">Suspend</button>
+            </form>
+            <form action="/admin/users/<%= person.id %>/status" method="post">
+              <input type="hidden" name="status" value="archived" />
+              <button type="submit" class="button-link button-link-secondary">Archive</button>
+            </form>
+          </div>
+          <form action="/admin/users/<%= person.id %>/role" method="post" class="inline-form compact-form">
+            <select name="roleKey">
+              <% roles.forEach((role) => { %>
+                <option value="<%= role.key %>" <%= person.role_key === role.key ? "selected" : "" %>><%= role.name %></option>
+              <% }) %>
+            </select>
+            <button type="submit" class="button-link button-link-secondary">Update role</button>
+          </form>
+        </article>
+      <% }) %>
+    </div>
+  </section>
+
+  <section class="logbook-tab-panel" data-admin-panel="suspended">
+    <div class="section-header">
+      <div>
+        <p class="section-kicker">Suspended accounts</p>
+        <h2>Temporarily restricted users</h2>
+      </div>
+      <span class="pill"><%= peopleByStatus.suspended.length %> suspended</span>
+    </div>
+    <% if (!peopleByStatus.suspended.length) { %>
+      <div class="empty-state">No suspended users.</div>
+    <% } %>
+    <div class="table-like">
+      <% peopleByStatus.suspended.forEach((person) => { %>
+        <article class="list-card">
+          <strong><a href="/admin/users/<%= person.id %>"><%= person.display_name ?? person.name %></a></strong>
+          <div class="tag-row">
+            <span class="pill"><%= person.username %></span>
+            <span class="pill"><%= person.email %></span>
+            <span class="pill"><%= person.role_name %></span>
+            <span class="status-pill status-returned"><%= person.status %></span>
+          </div>
+          <div class="admin-action-row">
+            <form action="/admin/users/<%= person.id %>/status" method="post">
+              <input type="hidden" name="status" value="active" />
+              <button type="submit">Reactivate</button>
+            </form>
+            <form action="/admin/users/<%= person.id %>/status" method="post">
+              <input type="hidden" name="status" value="archived" />
+              <button type="submit" class="button-link button-link-secondary">Archive</button>
+            </form>
+          </div>
+        </article>
+      <% }) %>
+    </div>
+  </section>
+
+  <section class="logbook-tab-panel" data-admin-panel="archived">
+    <div class="section-header">
+      <div>
+        <p class="section-kicker">Archived accounts</p>
+        <h2>Historical inactive users</h2>
+      </div>
+      <span class="pill"><%= peopleByStatus.archived.length %> archived</span>
+    </div>
+    <% if (!peopleByStatus.archived.length) { %>
+      <div class="empty-state">No archived users.</div>
+    <% } %>
+    <div class="table-like">
+      <% peopleByStatus.archived.forEach((person) => { %>
+        <article class="list-card">
+          <strong><a href="/admin/users/<%= person.id %>"><%= person.display_name ?? person.name %></a></strong>
+          <div class="tag-row">
+            <span class="pill"><%= person.username %></span>
+            <span class="pill"><%= person.email %></span>
+            <span class="pill"><%= person.role_name %></span>
+            <span class="status-pill"><%= person.status %></span>
+          </div>
+          <p class="meta-text">Archived account kept for record and history.</p>
+        </article>
+      <% }) %>
+    </div>
+  </section>
+
+  <section class="logbook-tab-panel" data-admin-panel="profile-requests">
+    <div class="section-header">
+      <div>
+        <p class="section-kicker">Profile change requests</p>
+        <h2>Pending profile updates</h2>
+      </div>
+      <span class="pill"><%= profileRequests.length %> pending</span>
+    </div>
+    <% if (!profileRequests.length) { %>
+      <div class="empty-state">No pending profile change requests.</div>
+    <% } %>
+    <div class="stack-list">
+      <% profileRequests.forEach((req) => { %>
+        <article class="list-card profile-request-card">
+          <div class="section-header">
+            <div>
+              <strong><%= req.user_display_name || req.user_name %></strong>
+              <p class="section-copy"><%= req.user_username %> · <%= req.role_name %></p>
+            </div>
+            <span class="status-pill status-submitted">Pending</span>
+          </div>
+          <div class="profile-request-fields">
+            <% Object.entries(req.requested_fields).forEach(([key, val]) => { %>
+              <div class="profile-request-field">
+                <span class="profile-request-field-key"><%= key %></span>
+                <span class="profile-request-field-val"><%= val %></span>
+              </div>
+            <% }) %>
+          </div>
+          <p class="meta-text">Requested <%= new Date(req.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) %></p>
+          <div class="inline-actions">
+            <form action="/admin/profile-requests/<%= req.id %>/review" method="post" class="inline-form profile-review-form">
+              <input type="hidden" name="decision" value="approved" />
+              <input type="text" name="reviewerNotes" placeholder="Optional note (optional for approval)" class="profile-review-notes" />
+              <button type="submit" class="button-link button-link-primary">
+                <span class="iconify" data-icon="ph:check-bold"></span>
+                Approve
+              </button>
+            </form>
+            <form action="/admin/profile-requests/<%= req.id %>/review" method="post" class="inline-form profile-review-form">
+              <input type="hidden" name="decision" value="rejected" />
+              <input type="text" name="reviewerNotes" placeholder="Reason for rejection (recommended)" class="profile-review-notes" />
+              <button type="submit" class="button-link button-link-danger">
+                <span class="iconify" data-icon="ph:x-bold"></span>
+                Reject
+              </button>
+            </form>
+          </div>
+        </article>
+      <% }) %>
+    </div>
+  </section>
+</section>
+
+<%- include("../partials/footer") %>

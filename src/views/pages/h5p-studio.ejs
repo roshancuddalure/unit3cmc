@@ -1,0 +1,201 @@
+<%- include("../partials/header", { title, currentUser, flash }) %>
+
+<!-- Studio command bar -->
+<div class="studio-command-bar">
+  <div class="studio-command-bar-left">
+    <p class="eyebrow">Interactive Learning Studio</p>
+    <h1>H5P Studio</h1>
+    <p class="section-copy">Compose and manage interactive lessons. Every item you publish here is mirrored into the Learning Library automatically.</p>
+    <% if (items && items.length) { %>
+      <div class="learning-stats-ribbon">
+        <div class="learning-stat">
+          <strong><%= items.length %></strong>
+          <span>Saved items</span>
+        </div>
+        <div class="learning-stat learning-stat-success">
+          <strong><%= items.filter(i => i.resourceStatus === 'published').length %></strong>
+          <span>Published</span>
+        </div>
+        <div class="learning-stat">
+          <strong><%= items.filter(i => i.resourceStatus === 'draft' || !i.resourceStatus).length %></strong>
+          <span>Drafts</span>
+        </div>
+        <% if (installedLibraryCount) { %>
+          <div class="learning-stat learning-stat-accent">
+            <strong><%= installedLibraryCount %></strong>
+            <span>Content types</span>
+          </div>
+        <% } %>
+      </div>
+    <% } %>
+  </div>
+  <div class="studio-command-bar-actions">
+    <a class="button-link button-link-primary" href="/api/h5p/edit/new">
+      <span class="iconify" data-icon="ph:plus-bold"></span>
+      Create new H5P
+    </a>
+    <a class="button-link button-link-secondary" href="/learning">
+      <span class="iconify" data-icon="ph:graduation-cap-bold"></span>
+      Learning Library
+    </a>
+    <a class="button-link button-link-secondary" href="/api/h5p/diag/health" target="_blank" rel="noreferrer">
+      <span class="iconify" data-icon="ph:activity-bold"></span>
+      Diagnostics
+    </a>
+  </div>
+</div>
+
+<% if (!installedLibraryCount) { %>
+  <div class="studio-setup-notice">
+    <div class="studio-setup-icon">
+      <span class="iconify" data-icon="ph:warning-circle-bold"></span>
+    </div>
+    <div>
+      <p class="section-kicker">Setup required</p>
+      <h3>No H5P content types installed yet</h3>
+      <p class="section-copy">The editor runtime is working, but it needs valid H5P libraries before authors can choose content types. Import a trusted <code>.h5p</code> package that bundles the libraries, or add libraries directly into <code>h5p-storage/libraries</code>.</p>
+    </div>
+  </div>
+<% } %>
+
+<!-- Two-zone workspace -->
+<div class="studio-workspace">
+
+  <!-- Left: Import + runtime info -->
+  <aside class="studio-compose-panel">
+    <div class="panel">
+      <p class="section-kicker">
+        <span class="iconify" data-icon="ph:download-simple-bold"></span>
+        Import package
+      </p>
+      <h2>Bring in an H5P file</h2>
+      <p class="section-copy">Import a <code>.h5p</code> file to install its required libraries and create a linked Unit 3 learning resource in one step.</p>
+      <form action="/api/h5p/import" method="post" enctype="multipart/form-data" class="stack-form">
+        <label>
+          <span>H5P package</span>
+          <input type="file" name="h5pPackage" accept=".h5p" required />
+        </label>
+        <button type="submit">
+          <span class="iconify" data-icon="ph:upload-simple-bold"></span>
+          Import package
+        </button>
+      </form>
+    </div>
+
+    <div class="studio-info-card">
+      <p class="section-kicker">What this studio covers</p>
+      <div class="studio-info-list">
+        <div class="studio-info-item">
+          <span class="studio-info-icon">
+            <span class="iconify" data-icon="ph:pencil-simple-bold"></span>
+          </span>
+          <div>
+            <strong>Editor</strong>
+            <p class="section-copy">Build and update interactive activities through Lumi's H5P editor runtime.</p>
+          </div>
+        </div>
+        <div class="studio-info-item">
+          <span class="studio-info-icon">
+            <span class="iconify" data-icon="ph:link-bold"></span>
+          </span>
+          <div>
+            <strong>Library sync</strong>
+            <p class="section-copy">Every H5P item is mirrored into the Learning Library so faculty can publish or draft linked resources.</p>
+          </div>
+        </div>
+        <div class="studio-info-item">
+          <span class="studio-info-icon">
+            <span class="iconify" data-icon="ph:play-bold"></span>
+          </span>
+          <div>
+            <strong>Learner player</strong>
+            <p class="section-copy">Activities open through the branded player and emit xAPI events back into the platform.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Right: Saved items library -->
+  <section class="studio-library-panel">
+    <div class="learning-library-header">
+      <div>
+        <p class="section-kicker">Saved content</p>
+        <h2>H5P Items</h2>
+      </div>
+      <% if (items && items.length) { %>
+        <span class="pill"><%= items.length %> items</span>
+      <% } %>
+    </div>
+
+    <% if (!items || !items.length) { %>
+      <div class="empty-state">
+        <span class="iconify" data-icon="ph:puzzle-piece-bold"></span>
+        <p>No H5P content saved yet. Create a new item above or import a package to begin.</p>
+      </div>
+    <% } %>
+
+    <div class="learning-resource-list">
+      <% if (items) { items.forEach((item) => { %>
+        <article class="learning-resource-card is-interactive studio-item-card">
+
+          <div class="learning-resource-card-top">
+            <div class="tag-row">
+              <span class="pill pill-interactive">
+                <span class="iconify" data-icon="ph:puzzle-piece-bold"></span>
+                H5P
+              </span>
+              <span class="status-pill status-<%= item.resourceStatus || 'draft' %>">
+                <%= item.resourceStatus || 'draft' %>
+              </span>
+              <span class="pill studio-id-pill">ID <%= item.contentId %></span>
+            </div>
+            <h3 class="learning-resource-title"><%= item.title %></h3>
+            <p class="section-copy learning-resource-desc">Library: <code><%= item.libraryName %></code></p>
+          </div>
+
+          <!-- Compose / play actions -->
+          <div class="learning-resource-actions">
+            <a class="button-link button-link-primary" href="/api/h5p/play/<%= item.contentId %>" target="_blank" rel="noreferrer">
+              <span class="iconify" data-icon="ph:play-bold"></span>
+              Open player
+            </a>
+            <a class="button-link button-link-secondary" href="/api/h5p/edit/<%= item.contentId %>" target="_blank" rel="noreferrer">
+              <span class="iconify" data-icon="ph:pencil-simple-bold"></span>
+              Edit composer
+            </a>
+            <a class="button-link button-link-secondary" href="/api/h5p/diag/dependencies/<%= item.contentId %>" target="_blank" rel="noreferrer">
+              <span class="iconify" data-icon="ph:tree-structure-bold"></span>
+              Dependencies
+            </a>
+            <form action="/h5p/studio/<%= item.contentId %>/delete" method="post" class="inline-form" onsubmit="return confirm('Delete this H5P item, its linked learning resource, learner progress, and xAPI history?');">
+              <input type="hidden" name="redirectTo" value="/h5p/studio" />
+              <button type="submit" class="button-link button-link-danger">
+                <span class="iconify" data-icon="ph:trash-bold"></span>
+                Delete
+              </button>
+            </form>
+          </div>
+
+          <!-- Linked resource status -->
+          <div class="learning-resource-progress studio-status-row">
+            <form action="/h5p/studio/<%= item.contentId %>/resource" method="post" class="inline-form">
+              <select name="status">
+                <option value="published" <%= item.resourceStatus === 'published' ? 'selected' : '' %>>Published in library</option>
+                <option value="draft" <%= (item.resourceStatus === 'draft' || !item.resourceStatus) ? 'selected' : '' %>>Draft — hidden from learners</option>
+              </select>
+              <button type="submit">
+                <span class="iconify" data-icon="ph:floppy-disk-bold"></span>
+                Save status
+              </button>
+            </form>
+          </div>
+
+        </article>
+      <% }) } %>
+    </div>
+  </section>
+
+</div>
+
+<%- include("../partials/footer") %>

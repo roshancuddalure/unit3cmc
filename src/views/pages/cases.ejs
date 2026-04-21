@@ -1,0 +1,459 @@
+<%- include("../partials/header", { title, currentUser, flash }) %>
+<%
+  const pretty = (value) =>
+    String(value || "")
+      .split("_")
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+
+  const draftCases = myCases.filter((caseItem) => caseItem.status === "draft");
+  const changeCases = myCases.filter((caseItem) => caseItem.status === "changes_requested");
+  const submittedCases = myCases.filter((caseItem) => caseItem.status === "submitted" || caseItem.status === "approved");
+  const completedCases = myCases.filter((caseItem) => caseItem.status === "published" || caseItem.status === "archived");
+
+  const renderCaseCard = (caseItem, showStatus = true) => { %>
+    <article class="list-card">
+      <strong><a href="/cases/<%= caseItem.id %>"><%= caseItem.title %></a></strong>
+      <% if (caseItem.subtitle) { %>
+        <p class="meta-text"><%= caseItem.subtitle %></p>
+      <% } %>
+      <p><%= caseItem.summary %></p>
+      <div class="tag-row">
+        <% if (showStatus) { %>
+          <span class="status-pill status-<%= caseItem.status === 'submitted' ? 'submitted' : caseItem.status === 'changes_requested' ? 'returned' : caseItem.status %>"><%= pretty(caseItem.status) %></span>
+        <% } %>
+        <% if (caseItem.isFeatured) { %>
+          <span class="pill">Featured</span>
+        <% } %>
+        <span class="pill"><%= pretty(caseItem.specialtyArea) %></span>
+        <span class="pill"><%= pretty(caseItem.anaesthesiaTechnique) %></span>
+        <span class="pill"><%= pretty(caseItem.complexityLevel) %></span>
+        <% caseItem.tags.forEach((tag) => { %>
+          <span class="tag"><%= tag %></span>
+        <% }) %>
+      </div>
+      <% if (caseItem.learningPoints) { %>
+        <p class="meta-text">Learning points: <%= caseItem.learningPoints %></p>
+      <% } %>
+      <% if (caseItem.contributorNames.length) { %>
+        <p class="meta-text">Contributors: <%= caseItem.contributorNames.join(", ") %></p>
+      <% } %>
+    </article>
+  <% };
+%>
+
+<section class="panel">
+  <p class="eyebrow">Cases</p>
+  <h1><%= subtitle %></h1>
+  <p class="section-copy">Save de-identified cases for teaching, reflection, discussion, and future unit learning.</p>
+</section>
+
+<section class="quick-stat-ribbon">
+  <article class="quick-stat-chip">
+    <span>Published cases</span>
+    <strong><%= browseStats.publishedCount %></strong>
+  </article>
+  <article class="quick-stat-chip">
+    <span>Featured now</span>
+    <strong><%= browseStats.featuredCount %></strong>
+  </article>
+  <article class="quick-stat-chip">
+    <span>My cases</span>
+    <strong><%= browseStats.myCaseCount %></strong>
+  </article>
+</section>
+
+<section class="panel sop-toolbar-panel">
+  <div class="section-header">
+    <div>
+      <p class="section-kicker">Browse cases</p>
+      <h2>Search the teaching archive</h2>
+    </div>
+  </div>
+  <form action="/cases" method="get" class="stack-form sop-filter-form">
+    <div class="sop-toolbar-grid">
+      <label>
+        <span>Search</span>
+        <input type="text" name="search" value="<%= filters.search %>" placeholder="Title, summary, learning point, or tag" />
+      </label>
+      <div class="inline-form">
+        <label>
+          <span>Specialty</span>
+          <select name="specialtyArea">
+            <option value="">All specialties</option>
+            <% caseEntryOptions.specialtyAreas.forEach((option) => { %>
+              <option value="<%= option %>" <%= filters.specialtyArea === option ? "selected" : "" %>><%= pretty(option) %></option>
+            <% }) %>
+          </select>
+        </label>
+        <label>
+          <span>Technique</span>
+          <select name="anaesthesiaTechnique">
+            <option value="">All techniques</option>
+            <% caseEntryOptions.anaesthesiaTechniques.forEach((option) => { %>
+              <option value="<%= option %>" <%= filters.anaesthesiaTechnique === option ? "selected" : "" %>><%= pretty(option) %></option>
+            <% }) %>
+          </select>
+        </label>
+      </div>
+      <div class="sop-toolbar-actions">
+        <button type="submit">Apply filters</button>
+      </div>
+    </div>
+    <div class="inline-form" style="margin-top: 1rem;">
+      <label>
+        <span>Urgency</span>
+        <select name="urgency">
+          <option value="">All</option>
+          <% caseEntryOptions.urgencies.forEach((option) => { %>
+            <option value="<%= option %>" <%= filters.urgency === option ? "selected" : "" %>><%= pretty(option) %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>
+        <span>Complexity</span>
+        <select name="complexityLevel">
+          <option value="">All</option>
+          <% caseEntryOptions.complexityLevels.forEach((option) => { %>
+            <option value="<%= option %>" <%= filters.complexityLevel === option ? "selected" : "" %>><%= pretty(option) %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label>
+        <span>Contributor</span>
+        <select name="contributorUserId">
+          <option value="">Any contributor</option>
+          <% contributors.forEach((person) => { %>
+            <option value="<%= person.id %>" <%= filters.contributorUserId === person.id ? "selected" : "" %>><%= person.displayName %></option>
+          <% }) %>
+        </select>
+      </label>
+      <a class="button-link button-link-secondary" href="/cases">Clear</a>
+    </div>
+  </form>
+</section>
+
+<% if (featuredCases.length) { %>
+  <section class="panel">
+    <div class="section-header">
+      <div>
+        <p class="section-kicker">Featured cases</p>
+        <h2>Useful cases to read first</h2>
+      </div>
+    </div>
+    <section class="grid-three">
+      <% featuredCases.forEach((caseItem) => { %>
+        <article class="kpi-card">
+          <p class="section-kicker"><%= caseItem.isFeatured ? "Featured case" : caseItem.hadCriticalEvent ? "Critical event" : pretty(caseItem.complexityLevel) %></p>
+          <h3><a href="/cases/<%= caseItem.id %>"><%= caseItem.title %></a></h3>
+          <% if (caseItem.subtitle) { %>
+            <p class="meta-text"><%= caseItem.subtitle %></p>
+          <% } %>
+          <p class="section-copy"><%= caseItem.learningPoints || caseItem.summary %></p>
+          <div class="tag-row">
+            <% if (caseItem.isFeatured) { %>
+              <span class="pill">Featured</span>
+            <% } %>
+            <span class="pill"><%= pretty(caseItem.specialtyArea) %></span>
+            <span class="pill"><%= pretty(caseItem.anaesthesiaTechnique) %></span>
+          </div>
+        </article>
+      <% }) %>
+    </section>
+  </section>
+<% } %>
+
+<section class="logbook-tab-shell case-workspace" data-case-workspace-tabs>
+  <div class="section-header">
+    <div>
+      <p class="section-kicker">Case sections</p>
+      <h2>Choose what you want to do</h2>
+    </div>
+  </div>
+  <nav class="logbook-tab-nav" aria-label="Case sections">
+    <button type="button" class="button-link is-active" data-case-workspace-tab="submit" aria-pressed="true">
+      Submit case <span class="tab-badge">New</span>
+    </button>
+    <button type="button" class="button-link" data-case-workspace-tab="mine" aria-pressed="false">
+      My cases <span class="tab-badge"><%= myCases.length %></span>
+    </button>
+    <% if (canReviewQueue) { %>
+      <button type="button" class="button-link" data-case-workspace-tab="review" aria-pressed="false">
+        Review queue <span class="tab-badge"><%= reviewQueue.length %></span>
+      </button>
+    <% } %>
+    <button type="button" class="button-link" data-case-workspace-tab="archive" aria-pressed="false">
+      Published <span class="tab-badge"><%= publishedCases.length %></span>
+    </button>
+  </nav>
+
+  <section class="logbook-tab-panel" data-case-workspace-panel="submit">
+    <section class="panel case-submit-panel">
+      <div class="section-header">
+        <div>
+          <p class="section-kicker">Submit case</p>
+          <h2>Add a teaching case</h2>
+        </div>
+        <div class="case-draft-status" data-case-draft-status>No saved draft yet</div>
+      </div>
+
+      <div class="callout callout-info">
+        <p class="section-kicker">Privacy</p>
+        <p class="section-copy">Do not include patient names, hospital numbers, full dates of birth, bed numbers, phone numbers, or anything that can identify a person.</p>
+      </div>
+
+      <form action="/cases" method="post" class="stack-form case-submission-form" data-case-submission-form>
+        <div class="case-template-bar" aria-label="Case templates">
+          <span>Start with a template</span>
+          <button type="button" class="button-link button-link-secondary" data-case-template="routine">Routine learning case</button>
+          <button type="button" class="button-link button-link-secondary" data-case-template="critical">Critical event</button>
+          <button type="button" class="button-link button-link-secondary" data-case-template="airway">Airway case</button>
+          <button type="button" class="button-link button-link-secondary" data-case-template="regional">Regional anaesthesia</button>
+          <button type="button" class="button-link button-link-secondary" data-case-template="icu">ICU crossover</button>
+        </div>
+
+        <nav class="case-step-nav" aria-label="Case submission steps">
+          <button type="button" class="button-link is-active" data-case-step-tab="basic" aria-pressed="true">Basic details</button>
+          <button type="button" class="button-link" data-case-step-tab="teaching" aria-pressed="false">Teaching points</button>
+          <button type="button" class="button-link" data-case-step-tab="clinical" aria-pressed="false">Clinical details</button>
+          <button type="button" class="button-link" data-case-step-tab="people" aria-pressed="false">People and links</button>
+          <button type="button" class="button-link" data-case-step-tab="review" aria-pressed="false">Review and submit</button>
+        </nav>
+
+        <div class="case-privacy-warning" data-case-privacy-warning hidden>
+          Please check the highlighted text fields. They may contain identifiers such as long numbers, full dates, bed numbers, or patient-name wording.
+        </div>
+
+        <section class="case-step-panel is-active" data-case-step-panel="basic">
+          <div class="grid-two">
+            <label><span>Title</span><input type="text" name="title" required placeholder="Short de-identified case title" /></label>
+            <label><span>Subtitle</span><input type="text" name="subtitle" placeholder="Short teaching hook or one-line takeaway" /></label>
+          </div>
+          <label><span>Case summary</span><textarea name="summary" rows="7" required data-case-privacy-field placeholder="Brief de-identified account of the case"></textarea></label>
+          <div class="case-step-actions">
+            <button type="button" class="button-link button-link-secondary" data-case-next-step>Next: Teaching points</button>
+          </div>
+        </section>
+
+        <section class="case-step-panel" data-case-step-panel="teaching" hidden>
+          <label><span>Learning points</span><textarea name="learningPoints" rows="4" data-case-privacy-field placeholder="What should others learn from this case?"></textarea></label>
+          <div class="grid-two">
+            <label><span>Why this case matters</span><textarea name="whyThisCaseMatters" rows="4" data-case-privacy-field placeholder="Why should this case be remembered or discussed in the unit?"></textarea></label>
+            <label><span>Key decision points</span><textarea name="keyDecisionPoints" rows="4" data-case-privacy-field placeholder="Major judgement calls, turning points, or decision moments"></textarea></label>
+          </div>
+          <div class="grid-two">
+            <label><span>What went well</span><textarea name="whatWentWell" rows="4" data-case-privacy-field placeholder="What worked especially well in this case?"></textarea></label>
+            <label><span>What could be improved</span><textarea name="whatCouldImprove" rows="4" data-case-privacy-field placeholder="What should be done better next time?"></textarea></label>
+          </div>
+          <label><span>Take-home points</span><textarea name="takeHomePoints" rows="3" data-case-privacy-field placeholder="Short practical takeaways for the team"></textarea></label>
+          <div class="case-step-actions">
+            <button type="button" class="button-link button-link-secondary" data-case-prev-step>Back</button>
+            <button type="button" class="button-link button-link-secondary" data-case-next-step>Next: Clinical details</button>
+          </div>
+        </section>
+
+        <section class="case-step-panel" data-case-step-panel="clinical" hidden>
+          <div class="grid-two">
+            <label>
+              <span>Specialty</span>
+              <select name="specialtyArea">
+                <% caseEntryOptions.specialtyAreas.forEach((option) => { %>
+                  <option value="<%= option %>"><%= pretty(option) %></option>
+                <% }) %>
+              </select>
+            </label>
+            <label>
+              <span>Technique</span>
+              <select name="anaesthesiaTechnique">
+                <% caseEntryOptions.anaesthesiaTechniques.forEach((option) => { %>
+                  <option value="<%= option %>"><%= pretty(option) %></option>
+                <% }) %>
+              </select>
+            </label>
+          </div>
+          <div class="grid-two">
+            <label>
+              <span>Urgency</span>
+              <select name="urgency">
+                <% caseEntryOptions.urgencies.forEach((option) => { %>
+                  <option value="<%= option %>"><%= pretty(option) %></option>
+                <% }) %>
+              </select>
+            </label>
+            <label>
+              <span>Age band</span>
+              <select name="patientAgeBand">
+                <% caseEntryOptions.patientAgeBands.forEach((option) => { %>
+                  <option value="<%= option %>"><%= pretty(option) %></option>
+                <% }) %>
+              </select>
+            </label>
+          </div>
+          <div class="grid-two">
+            <label>
+              <span>Complexity</span>
+              <select name="complexityLevel">
+                <% caseEntryOptions.complexityLevels.forEach((option) => { %>
+                  <option value="<%= option %>"><%= pretty(option) %></option>
+                <% }) %>
+              </select>
+            </label>
+            <label>
+              <span>Setting</span>
+              <select name="setting">
+                <% caseEntryOptions.settings.forEach((option) => { %>
+                  <option value="<%= option %>"><%= pretty(option) %></option>
+                <% }) %>
+              </select>
+            </label>
+          </div>
+          <div class="grid-two">
+            <label>
+              <span>Critical event</span>
+              <select name="hadCriticalEvent">
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+              </select>
+            </label>
+            <label>
+              <span>Tags</span>
+              <input type="text" name="tags" placeholder="airway, trauma, crisis resource management" />
+            </label>
+          </div>
+          <div class="case-step-actions">
+            <button type="button" class="button-link button-link-secondary" data-case-prev-step>Back</button>
+            <button type="button" class="button-link button-link-secondary" data-case-next-step>Next: People and links</button>
+          </div>
+        </section>
+
+        <section class="case-step-panel" data-case-step-panel="people" hidden>
+          <label>
+            <span>Other anaesthetists involved</span>
+            <select name="contributorUserIds" multiple size="<%= Math.min(Math.max(contributors.length, 4), 8) %>">
+              <% contributors.forEach((person) => { %>
+                <option value="<%= person.id %>"><%= person.displayName %><%= person.designation ? ` - ${person.designation}` : "" %></option>
+              <% }) %>
+            </select>
+          </label>
+          <% if (relatedDocuments.length || relatedLearningResources.length) { %>
+            <div class="grid-two">
+              <label>
+                <span>Related SOPs</span>
+                <select name="relatedDocumentIds" multiple size="<%= Math.min(Math.max(relatedDocuments.length || 4, 4), 8) %>">
+                  <% relatedDocuments.forEach((document) => { %>
+                    <option value="<%= document.id %>"><%= document.title %></option>
+                  <% }) %>
+                </select>
+              </label>
+              <label>
+                <span>Related learning resources</span>
+                <select name="relatedLearningResourceIds" multiple size="<%= Math.min(Math.max(relatedLearningResources.length || 4, 4), 8) %>">
+                  <% relatedLearningResources.forEach((resource) => { %>
+                    <option value="<%= resource.id %>"><%= resource.title %> - <%= resource.resourceType %></option>
+                  <% }) %>
+                </select>
+              </label>
+            </div>
+          <% } %>
+          <p class="helper-text">Hold Ctrl or Cmd to select more than one name. Your own name will be added automatically.</p>
+          <div class="case-step-actions">
+            <button type="button" class="button-link button-link-secondary" data-case-prev-step>Back</button>
+            <button type="button" class="button-link button-link-secondary" data-case-next-step>Next: Review and submit</button>
+          </div>
+        </section>
+
+        <section class="case-step-panel" data-case-step-panel="review" hidden>
+          <div class="case-review-card">
+            <p class="section-kicker">Final check</p>
+            <h3>Before saving, confirm this case is de-identified</h3>
+            <p class="section-copy">The case can be saved as a draft or submitted for review. Submitting does not publish it immediately.</p>
+            <ul>
+              <li>No patient names or initials</li>
+              <li>No hospital numbers, bed numbers, phone numbers, or exact dates of birth</li>
+              <li>No details that make the patient identifiable by context</li>
+            </ul>
+          </div>
+          <div class="case-step-actions">
+            <button type="button" class="button-link button-link-secondary" data-case-prev-step>Back</button>
+            <button type="submit" name="action" value="save_draft" class="button-link button-link-secondary">Save draft</button>
+            <button type="submit" name="action" value="submit_case">Submit case</button>
+            <button type="button" class="button-link button-link-secondary" data-case-clear-draft>Clear local draft</button>
+          </div>
+        </section>
+      </form>
+    </section>
+  </section>
+
+  <section class="logbook-tab-panel" data-case-workspace-panel="mine" hidden>
+    <section class="panel">
+      <div class="section-header">
+        <div>
+          <p class="section-kicker">My cases</p>
+          <h2>Cases you created or joined</h2>
+        </div>
+      </div>
+      <% if (!myCases.length) { %>
+        <div class="empty-state">Your drafts and submitted cases will appear here.</div>
+      <% } %>
+      <% if (changeCases.length) { %>
+        <section class="case-status-group">
+          <h3>Needs changes</h3>
+          <% changeCases.forEach((caseItem) => renderCaseCard(caseItem)); %>
+        </section>
+      <% } %>
+      <% if (draftCases.length) { %>
+        <section class="case-status-group">
+          <h3>Drafts</h3>
+          <% draftCases.forEach((caseItem) => renderCaseCard(caseItem)); %>
+        </section>
+      <% } %>
+      <% if (submittedCases.length) { %>
+        <section class="case-status-group">
+          <h3>Submitted or approved</h3>
+          <% submittedCases.forEach((caseItem) => renderCaseCard(caseItem)); %>
+        </section>
+      <% } %>
+      <% if (completedCases.length) { %>
+        <section class="case-status-group">
+          <h3>Published or archived</h3>
+          <% completedCases.forEach((caseItem) => renderCaseCard(caseItem)); %>
+        </section>
+      <% } %>
+    </section>
+  </section>
+
+  <% if (canReviewQueue) { %>
+    <section class="logbook-tab-panel" data-case-workspace-panel="review" hidden>
+      <section class="panel">
+        <div class="section-header">
+          <div>
+            <p class="section-kicker">Review queue</p>
+            <h2>Cases waiting for review</h2>
+          </div>
+        </div>
+        <% if (!reviewQueue.length) { %>
+          <div class="empty-state">No cases are currently waiting for review.</div>
+        <% } %>
+        <% reviewQueue.forEach((caseItem) => renderCaseCard(caseItem)); %>
+      </section>
+    </section>
+  <% } %>
+
+  <section class="logbook-tab-panel" data-case-workspace-panel="archive" hidden>
+    <section class="panel">
+      <div class="section-header">
+        <div>
+          <p class="section-kicker">Published cases</p>
+          <h2>Shared teaching archive</h2>
+        </div>
+      </div>
+      <% if (!publishedCases.length) { %>
+        <div class="empty-state">No published teaching cases match the current search or filters.</div>
+      <% } %>
+      <% publishedCases.forEach((caseItem) => renderCaseCard(caseItem, false)); %>
+    </section>
+  </section>
+</section>
+
+<%- include("../partials/footer") %>
