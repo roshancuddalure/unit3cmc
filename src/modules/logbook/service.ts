@@ -525,6 +525,7 @@ export class LogbookService {
     }
   ) {
     const canReview = hasPermission(user.role, "logbook:review");
+    const canViewInvolvedCases = hasPermission(user.role, "logbook:involved-view");
     const personalRange = resolveDateRange(filters.periodStart, filters.periodEnd, 28);
     const personalRecentEntries = await this.logbookRepository.listByUser(user.id, 12);
     const surgeryNameSuggestions = await this.logbookRepository.listSurgeryNameSuggestions(user.unitId);
@@ -663,15 +664,32 @@ export class LogbookService {
           membersNeedingAttention
         };
       }
+    } else if (canViewInvolvedCases) {
+      teamRange = resolveDateRange(filters.memberPeriodStart, filters.memberPeriodEnd, 28);
+      teamView = "involved";
+      teamBrowseFilters = buildBrowseFilters(
+        teamRange,
+        {
+          searchText: filters.teamEntrySearch,
+          caseType: filters.teamEntryCaseType,
+          surgicalDepartment: filters.teamEntryDepartment,
+          flaggedOnly: filters.teamEntryFlagged
+        },
+        80
+      );
+      unitBrowseEntries = await this.logbookRepository.browseInvolvingUser(user, teamBrowseFilters);
+      unitBrowseSummary = buildUnitBrowseSummary(unitBrowseEntries);
     }
 
     return {
       title: "Clinical logbook",
       canReview,
+      canViewInvolvedCases,
       tabBadges: {
         capture: "New",
         analysis: personalSummary.totalCases > 0 ? String(personalSummary.totalCases) : "0",
         entries: personalEntries.length > 0 ? String(personalEntries.length) : "0",
+        involved: canViewInvolvedCases ? String(unitBrowseEntries.length) : "",
         oversight: canReview
           ? teamView === "overview"
             ? String(overviewSnapshot?.membersWithCases ?? 0)
@@ -783,7 +801,11 @@ export class LogbookService {
     }
 
     const isOwnCase = entry.userId === user.id;
-    if (!isOwnCase && !hasPermission(user.role, "logbook:review")) {
+    const canPrintInvolvedCase =
+      !isOwnCase &&
+      hasPermission(user.role, "logbook:involved-view") &&
+      await this.logbookRepository.isEntryInvolvingUser(user, entryId);
+    if (!isOwnCase && !hasPermission(user.role, "logbook:review") && !canPrintInvolvedCase) {
       throw new HttpError(403, "You do not have permission to print this logbook case.");
     }
 
@@ -795,7 +817,7 @@ export class LogbookService {
       metadata: {
         activityDate: entry.activityDate,
         entryOwnerUserId: entry.userId,
-        mode: isOwnCase ? "personal" : "team"
+        mode: isOwnCase ? "personal" : canPrintInvolvedCase ? "involved" : "team"
       }
     });
 
@@ -805,7 +827,7 @@ export class LogbookService {
       title: `${caseName} - ${entry.procedureName}`,
       generatedAt: new Date().toISOString(),
       entry,
-      printMode: isOwnCase ? "personal" : "team",
+      printMode: isOwnCase ? "personal" : canPrintInvolvedCase ? "involved" : "team",
       showChrome: false
     };
   }

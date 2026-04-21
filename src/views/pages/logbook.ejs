@@ -33,6 +33,9 @@
       <% if (canReview) { %>
         <button type="button" class="button-link button-link-secondary" data-logbook-jump-tab="oversight">Open chief/faculty browser</button>
       <% } %>
+      <% if (canViewInvolvedCases) { %>
+        <button type="button" class="button-link button-link-secondary" data-logbook-jump-tab="involved">Open cases involving me</button>
+      <% } %>
     </div>
   </div>
   <div class="callout callout-info">
@@ -87,6 +90,12 @@
       <button type="button" class="button-link" data-logbook-tab="oversight">
         <span>Unit oversight</span>
         <span class="tab-badge"><%= tabBadges.oversight %></span>
+      </button>
+    <% } %>
+    <% if (canViewInvolvedCases) { %>
+      <button type="button" class="button-link" data-logbook-tab="involved">
+        <span>Cases involving me</span>
+        <span class="tab-badge"><%= tabBadges.involved %></span>
       </button>
     <% } %>
   </nav>
@@ -503,7 +512,7 @@
       <form action="/logbook" method="get" class="logbook-browser-filter-bar">
         <input type="hidden" name="periodStart" value="<%= personal.range.start %>" />
         <input type="hidden" name="periodEnd" value="<%= personal.range.end %>" />
-        <% if (canReview) { %>
+        <% if (canReview || canViewInvolvedCases) { %>
           <input type="hidden" name="teamView" value="<%= team.view %>" />
           <input type="hidden" name="memberId" value="<%= team.selectedMemberId %>" />
           <input type="hidden" name="memberPeriodStart" value="<%= team.range.start %>" />
@@ -631,6 +640,131 @@
       <% }) %>
     </div>
   </section>
+
+  <% if (canViewInvolvedCases) { %>
+    <section class="logbook-tab-panel" data-logbook-panel="involved">
+      <div class="section-header">
+        <div>
+          <p class="section-kicker">Faculty reference</p>
+          <h2>Cases involving me</h2>
+        </div>
+      </div>
+      <div class="logbook-browser-shell">
+        <div class="logbook-browser-hero">
+          <div>
+            <p class="section-kicker">Scoped access</p>
+            <h3>Only your own cases and cases that mention your name</h3>
+            <p class="section-copy">
+              Showing entries from <strong><%= team.range.start %></strong> to <strong><%= team.range.end %></strong>. This view does not expose chief/unit-wide analytics.
+            </p>
+          </div>
+          <div class="logbook-browser-stat-ribbon">
+            <article class="logbook-browser-stat"><span>Shown</span><strong><%= team.unitBrowseSummary.visibleCases %></strong></article>
+            <article class="logbook-browser-stat"><span>People</span><strong><%= team.unitBrowseSummary.peopleVisible %></strong></article>
+            <article class="logbook-browser-stat"><span>Complex</span><strong><%= team.unitBrowseSummary.complexCases %></strong></article>
+            <article class="logbook-browser-stat"><span>Flagged</span><strong><%= team.unitBrowseSummary.flaggedCases %></strong></article>
+          </div>
+        </div>
+        <form action="/logbook" method="get" class="logbook-browser-filter-bar">
+          <input type="hidden" name="periodStart" value="<%= personal.range.start %>" />
+          <input type="hidden" name="periodEnd" value="<%= personal.range.end %>" />
+          <input type="hidden" name="entrySearch" value="<%= personal.browseFilters.searchText %>" />
+          <input type="hidden" name="entryCaseType" value="<%= personal.browseFilters.caseType %>" />
+          <input type="hidden" name="entryDepartment" value="<%= personal.browseFilters.surgicalDepartment %>" />
+          <% if (personal.browseFilters.flaggedOnly) { %>
+            <input type="hidden" name="entryFlagged" value="true" />
+          <% } %>
+          <input type="hidden" name="teamView" value="involved" />
+          <label><span>Start</span><input type="date" name="memberPeriodStart" value="<%= team.range.start %>" required /></label>
+          <label><span>End</span><input type="date" name="memberPeriodEnd" value="<%= team.range.end %>" required /></label>
+          <label><span>Search</span><input type="search" name="teamEntrySearch" value="<%= team.browseFilters.searchText %>" placeholder="Surgery, OT, case #..." /></label>
+          <label>
+            <span>Case type</span>
+            <select name="teamEntryCaseType">
+              <option value="">All case types</option>
+              <% entryOptions.caseTypes.forEach((option) => { %>
+                <option value="<%= option %>" <%= team.browseFilters.caseType === option ? "selected" : "" %>><%= option %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>
+            <span>Department</span>
+            <select name="teamEntryDepartment">
+              <option value="">All departments</option>
+              <% entryOptions.surgicalDepartments.forEach((option) => { %>
+                <option value="<%= option %>" <%= team.browseFilters.surgicalDepartment === option ? "selected" : "" %>><%= option %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label class="logbook-browser-toggle">
+            <input type="checkbox" name="teamEntryFlagged" value="true" <%= team.browseFilters.flaggedOnly ? "checked" : "" %> />
+            <span>Flagged only</span>
+          </label>
+          <button type="submit">Browse involved cases</button>
+        </form>
+      </div>
+
+      <% if (!team.unitBrowseEntries.length) { %>
+        <div class="empty-state">No cases match your name or current filters yet.</div>
+      <% } %>
+      <div class="logbook-browser-results compact-browser-results">
+        <% team.unitBrowseEntries.forEach((entry) => { %>
+          <article class="logbook-browser-unit-card">
+            <div class="logbook-entry-head">
+              <div>
+                <p class="section-kicker"><%= entry.userName %> <%= entry.designation ? `| ${entry.designation}` : "" %></p>
+                <strong><%= caseLabel(entry) %> | <%= entry.procedureName %></strong>
+              </div>
+              <div class="tag-row">
+                <span class="pill"><%= entry.activityDate %></span>
+                <span class="pill"><%= entry.caseType %></span>
+                <span class="pill"><%= pretty(entry.roleKey) %></span>
+              </div>
+            </div>
+            <div class="logbook-card-actions">
+              <button
+                type="button"
+                class="button-link button-link-secondary logbook-view-case-button"
+                data-logbook-case-view
+                data-case-owner="<%= entry.userName %><%= entry.designation ? ` | ${entry.designation}` : '' %>"
+                data-case-number="<%= caseLabel(entry) %>"
+                data-case-title="<%= entry.procedureName %>"
+                data-case-date="<%= entry.activityDate %>"
+                data-case-type="<%= entry.caseType %>"
+                data-case-department="<%= showText(entry.surgicalDepartment) %>"
+                data-case-ot="<%= showText(entry.otNumber) %>"
+                data-case-age="<%= showText(entry.ageYears) %>"
+                data-case-gender="<%= showText(entry.gender) %>"
+                data-case-asa="<%= formatAsa(entry.asaPhysicalStatus) %>"
+                data-case-bmi="<%= entry.bmi ?? '-' %>"
+                data-case-time="<%= showText(entry.surgeryStartTime) %> to <%= showText(entry.surgeryEndTime) %>"
+                data-case-duration="<%= entry.durationMinutes ? `${entry.durationMinutes} minutes` : '-' %>"
+                data-case-plan="<%= showText(entry.anaestheticPlanned || pretty(entry.anaesthesiaTechnique)) %>"
+                data-case-supervision="<%= showText(entry.supervisionLevel) %>"
+                data-case-airway="<%= showText(entry.airwayManagement) %>"
+                data-case-scopy="<%= showText(entry.scopyTechnique) %>"
+                data-case-postop="<%= joinItems(entry.postOperativeCare) %>"
+                data-case-comorbidities="<%= joinItems(entry.comorbidities) %>"
+                data-case-procedures="<%= joinItems(entry.procedures) %>"
+                data-case-analgesia="<%= joinItems(entry.analgesiaItems) %>"
+                data-case-events="<%= entry.hadComplication ? entry.complicationSummary : '-' %>"
+                data-case-learning="<%= joinItems(entry.learningPoints) %>"
+              >View case</button>
+              <a class="button-link button-link-secondary logbook-print-case-button" href="/logbook/print/case/<%= entry.id %>" target="_blank" rel="noreferrer">Print case</a>
+            </div>
+            <p class="meta-text"><%= showText(entry.surgicalDepartment) %> | <%= showText(entry.anaestheticPlanned || pretty(entry.anaesthesiaTechnique)) %> | <%= showText(entry.supervisionLevel) %></p>
+            <p class="meta-text">OT <%= showText(entry.otNumber) %> | <%= formatAsa(entry.asaPhysicalStatus) %> | Post op: <%= joinItems(entry.postOperativeCare) %></p>
+            <% if (entry.hadComplication) { %>
+              <p class="status-callout status-returned">Intra operative events: <%= entry.complicationSummary %></p>
+            <% } %>
+            <% if (entry.learningPoints.length) { %>
+              <p class="meta-text">Learning: <%= joinItems(entry.learningPoints) %></p>
+            <% } %>
+          </article>
+        <% }) %>
+      </div>
+    </section>
+  <% } %>
 
   <% if (canReview) { %>
     <section class="logbook-tab-panel" data-logbook-panel="oversight">

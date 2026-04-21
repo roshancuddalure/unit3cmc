@@ -23,6 +23,14 @@ When the UI exposes pages or counts that the role should not conceptually own, u
 
 - Review roles may see unit-level oversight metrics.
 - Individual trainee roles should default to self-scoped metrics, not unit totals, unless explicitly intended.
+- Faculty is a separate limited role, not a synonym for unit chief/admin. Faculty may have scoped reference views, but must not inherit confidential unit oversight, admin management, learning management, or document authoring unless that permission is explicitly added.
+
+## Scoped faculty access rule
+
+- Use `logbook:review` only for true chief/reviewer unit-wide oversight.
+- Use `logbook:involved-view` for faculty who can see their own cases plus cases where their name is mentioned for referral or feedback.
+- Do not show `Reviews`, unit-wide dashboards, chief comparison boards, or learner-wide analytics to `faculty`.
+- UI copy for scoped faculty views should say `cases involving me`, `scoped access`, or `reference`, never `unit oversight`.
 
 ## Content rule
 

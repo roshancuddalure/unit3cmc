@@ -8,7 +8,8 @@ Use this pattern when building or debugging clinical logbooks, trainee case reco
 
 - Logbooks must be structured, not mostly free text.
 - Every user should be able to maintain their own case log.
-- Chief/faculty/review roles should be able to inspect an individual over a chosen date range.
+- Chief/review roles should be able to inspect an individual over a chosen date range.
+- Faculty should be a separate limited role: they may maintain their own logbook and view cases involving them, but must not see unit-wide confidential oversight by default.
 - Weekly reports should be generated from actual logged cases.
 - Oversight should focus on case mix, supervision, complexity, and flagged events, not only raw counts.
 
@@ -55,7 +56,8 @@ Use this pattern when building or debugging clinical logbooks, trainee case reco
 ## Recommended browsing workflow
 
 - Learners need a personal case browser, not only a recent-entry list.
-- Faculty/chief users need both selected-trainee browsing and unit-wide browsing.
+- Chief/reviewer users need both selected-trainee browsing and unit-wide browsing.
+- Faculty users need a scoped "cases involving me" browser that includes their own cases and cases where their name appears in the case log for referral/feedback.
 - Browse views should support period scope, search, case type, department, and flagged-event filtering.
 - Case cards should show enough perioperative context to review safely without opening multiple pages.
 - Unit-wide browsing should identify the learner, role/designation, case number, case type, supervision, complexity, and flagged events.
@@ -102,6 +104,7 @@ Official anaesthesia training guidance expects a real logbook, and case-review c
 
 - Never design this around patient identifiers.
 - Prefer stable enumerated fields over uncontrolled free text.
+- Keep faculty access scoped to `logbook:involved-view`; do not reuse `logbook:review` for convenience.
 - When a professor-approved blueprint exists, mirror it in schema and UI rather than flattening it back into generic logbook categories.
 - Case numbering in this project should be per-user, not a unit-wide global counter.
 - Keep `Docs for plan/logbook-blueprint-and-browser-implementation-log-2026-04-21.md` updated when changing logbook capture, browser, popup, print, or analytics behavior.

@@ -26,6 +26,15 @@ const permissionMatrix: Record<RoleKey, string[]> = {
     "cases:view",
     "cases:write"
   ],
+  faculty: [
+    "dashboard:view",
+    "logbook:write",
+    "logbook:involved-view",
+    "learning:view",
+    "documents:view",
+    "cases:view",
+    "cases:write"
+  ],
   postgraduate: [
     "dashboard:view",
     "logbook:write",

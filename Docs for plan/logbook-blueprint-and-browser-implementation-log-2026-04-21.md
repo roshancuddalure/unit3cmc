@@ -198,8 +198,28 @@ Verification commands used across these passes:
 - Do not remove the mandatory learning point rule.
 - Do not change case numbering to a unit-wide global counter.
 - Do not expose patient identifiers in the browser or popup.
+- Do not give the `faculty` role unit-wide logbook review access by default; keep faculty on scoped own/name-mentioned cases through `logbook:involved-view`.
 - Keep browser filters server-side for correctness and future scale.
 - Keep the popup limited to data the current user is already authorized to see.
 - Keep the print view official, de-identified, and PDF-safe; do not simply print the screen UI.
 - Keep print actions discoverable from both case cards and weekly review/submission areas.
 - When adding new blueprint fields, update capture, browser cards, popup, print view, tests, and this logbook documentation together.
+
+## Faculty Confidentiality Pass - 2026-04-21
+
+Implemented a separate `faculty` role with scoped logbook access.
+
+Changes made:
+
+- added role key `faculty`
+- added permission `logbook:involved-view`
+- prevented faculty from inheriting `logbook:review`, `admin:manage`, `learning:manage`, and document authoring/review permissions
+- added an `involved` logbook tab titled `Cases involving me`
+- added repository queries that return only the faculty member's own cases or cases where their display name/name/username is mentioned in intraoperative events, complication summaries, reflection notes, or learning points
+- extended case print authorization so faculty can print only their own or involved cases
+- updated role seeding/migration so production can create the new role
+
+Verification:
+
+- `npm run build`
+- `npm test`

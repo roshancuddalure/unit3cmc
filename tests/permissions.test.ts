@@ -7,8 +7,17 @@ describe("permissions", () => {
     expect(hasPermission("postgraduate", "admin:manage")).toBe(false);
   });
 
-  it("allows faculty to read and manage documents", () => {
+  it("allows unit admins to read and manage documents", () => {
     expect(hasPermission("unit_admin_or_faculty", "documents:view")).toBe(true);
     expect(hasPermission("unit_admin_or_faculty", "documents:write")).toBe(true);
+  });
+
+  it("keeps faculty scoped away from confidential unit management", () => {
+    expect(hasPermission("faculty", "logbook:write")).toBe(true);
+    expect(hasPermission("faculty", "logbook:involved-view")).toBe(true);
+    expect(hasPermission("faculty", "logbook:review")).toBe(false);
+    expect(hasPermission("faculty", "admin:manage")).toBe(false);
+    expect(hasPermission("faculty", "learning:manage")).toBe(false);
+    expect(hasPermission("faculty", "documents:write")).toBe(false);
   });
 });

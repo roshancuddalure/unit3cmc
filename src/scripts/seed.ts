@@ -19,7 +19,8 @@ async function seed(): Promise<void> {
 
   for (const [key, name] of [
     ["super_admin", "Super Admin"],
-    ["unit_admin_or_faculty", "Unit Admin / Faculty"],
+    ["unit_admin_or_faculty", "Unit Admin / Chief"],
+    ["faculty", "Faculty"],
     ["postgraduate", "Postgraduate"],
     ["reviewer", "Reviewer"]
   ]) {

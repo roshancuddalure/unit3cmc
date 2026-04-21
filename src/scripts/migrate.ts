@@ -480,6 +480,18 @@ async function migrate(): Promise<void> {
   `);
 
   await client.query(`
+    insert into roles (id, key, name)
+    values
+      (gen_random_uuid(), 'super_admin', 'Super Admin'),
+      (gen_random_uuid(), 'unit_admin_or_faculty', 'Unit Admin / Chief'),
+      (gen_random_uuid(), 'faculty', 'Faculty'),
+      (gen_random_uuid(), 'postgraduate', 'Postgraduate'),
+      (gen_random_uuid(), 'reviewer', 'Reviewer')
+    on conflict (key)
+    do update set name = excluded.name;
+  `);
+
+  await client.query(`
     alter table users add column if not exists display_name varchar(255);
     alter table users add column if not exists phone varchar(32);
     alter table users add column if not exists designation varchar(120);

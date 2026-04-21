@@ -9,7 +9,7 @@
 - Frontend: server-rendered multi-page app using Express views plus plain HTML/CSS/vanilla JS in `public/`; no React or frontend bundler in v1.
 - Backend: Node.js + Express in TypeScript, with modules for `auth`, `users`, `roles`, `logbook`, `reviews`, `documents`, `learning`, `cases`, `audit`, and `dashboard`.
 - Database: PostgreSQL via raw `pg`, with `node-pg-migrate` for schema migrations and seed scripts for initial roles/admin bootstrap.
-- Auth/session model: local username/email + password, `express-session`, `connect-pg-simple`, bcrypt, role-based access control with 4 roles: `super_admin`, `unit_admin_or_faculty`, `postgraduate`, `reviewer`.
+- Auth/session model: local username/email + password, `express-session`, `connect-pg-simple`, bcrypt, role-based access control with 5 roles: `super_admin`, `unit_admin_or_faculty`, `faculty`, `postgraduate`, `reviewer`.
 - File/document model: SOPs and internal documents stored as versioned records in Postgres, with files in object storage; every upload/version change creates an audit event.
 - Clinical data policy: allow limited internal identifiers only where operationally needed, but do not store patient names in learning resources or general case archives; restrict identifier visibility to authorized roles and log access.
 - Realtime: keep Socket.IO optional and limited to notifications/review-status updates; do not make core workflows depend on websockets.
@@ -125,6 +125,36 @@ Current direction:
 - show postgraduate year only for users who identify as postgraduate
 - keep backend guards so non-postgraduate users do not store a training year
 - use professional identity patterns from `skills/profile-module-pattern.md`
+
+## 2026-04-21 Login Feedback UX Upgrade
+
+Login should explain expected blockers instead of appearing to reload silently.
+
+Current direction:
+
+- invalid username/email or password returns to login with a clear error
+- pending approval returns to login with an informational approval message
+- suspended or archived accounts return to login with the account-state reason
+- throttle cooldown returns to login with the wait-time message
+- unexpected server failures still go through the global error page
+
+## 2026-04-21 Faculty Confidentiality Separation
+
+Faculty is now treated as a separate limited role, not as unit chief/admin.
+
+Current direction:
+
+- `unit_admin_or_faculty` remains the unit chief/admin-style role and is renamed in seed/migration display text to `Unit Admin / Chief`
+- `faculty` can add personal logbook cases
+- `faculty` can view a scoped `Cases involving me` logbook browser
+- scoped faculty access includes own cases plus cases where the faculty name/username appears in reflective/event/learning-point text
+- `faculty` must not see admin management, learning management, document authoring/review, unit-wide logbook oversight, or confidential unit analytics by default
+
+Implementation reminders:
+
+- run `npm run db:migrate` or `npm run db:seed` after deployment so the new `faculty` role exists in production
+- assign faculty users to the `Faculty` role from Admin after the role seed is present
+- future work should add explicit involved-faculty tagging if free-text name matching becomes too loose
 
 ## Assumptions And Defaults
 - Use `npm` as the package manager.

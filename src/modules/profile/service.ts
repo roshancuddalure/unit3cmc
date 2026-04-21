@@ -45,7 +45,7 @@ export class ProfileService {
     const isPrivileged = user.role === "super_admin" || user.role === "unit_admin_or_faculty";
 
     if (isPrivileged) {
-      // Admins and faculty update immediately — no approval required
+      // Admin/chief accounts update immediately; limited faculty follows the normal approval path.
       await this.profileRepository.updateOwnProfile(user.id, input);
 
       await this.auditRepository.record({

@@ -1,6 +1,7 @@
 export const roleKeys = [
   "super_admin",
   "unit_admin_or_faculty",
+  "faculty",
   "postgraduate",
   "reviewer"
 ] as const;

@@ -34,10 +34,10 @@ export function buildAuthRouter(authService: AuthService, loginThrottleService: 
   });
 
   router.post("/login", async (req, res, next) => {
-    try {
-      const identity = String(req.body.identity ?? "");
-      const ipAddress = req.ip || req.socket.remoteAddress || "unknown";
+    const identity = String(req.body.identity ?? "");
+    const ipAddress = req.ip || req.socket.remoteAddress || "unknown";
 
+    try {
       loginThrottleService.assertCanAttempt(identity, ipAddress);
 
       const user = await authService.signIn(identity, req.body.password);
@@ -53,10 +53,15 @@ export function buildAuthRouter(authService: AuthService, loginThrottleService: 
       res.redirect("/dashboard");
     } catch (error) {
       if (error instanceof HttpError && error.statusCode === 401) {
-        const identity = String(req.body.identity ?? "");
-        const ipAddress = req.ip || req.socket.remoteAddress || "unknown";
         loginThrottleService.recordFailure(identity, ipAddress);
       }
+
+      if (error instanceof HttpError && [401, 403, 429].includes(error.statusCode)) {
+        setFlash(req, error.statusCode === 403 ? "info" : "error", error.message);
+        res.redirect("/auth/login");
+        return;
+      }
+
       next(error);
     }
   });

@@ -3,6 +3,7 @@ import type { PoolClient } from "pg";
 import type { AppEnv } from "../../config/env";
 import { getPool } from "../../db/pool";
 import { query } from "../../db/query";
+import type { AuthenticatedUser } from "../../shared/types/domain";
 
 export interface LogbookEntryRecord {
   id: string;
@@ -532,29 +533,131 @@ export class LogbookRepository {
       ]
     );
 
-    const hydratedEntries = await this.hydrateEntries(result.rows);
-    const metadataById = new Map(
-      result.rows.map((row) => [
-        row.id,
-        {
-          userId: row.user_id,
-          userName: row.user_name,
-          roleKey: row.role_key,
-          designation: row.designation ?? ""
-        }
-      ])
+    return this.hydrateUnitRows(result.rows);
+  }
+
+  async browseInvolvingUser(user: AuthenticatedUser, filters: LogbookBrowseFilters): Promise<UnitBrowseEntryRecord[]> {
+    const involvementPatterns = this.buildInvolvementPatterns(user);
+    const result = await query<UnitBrowseRow>(
+      this.env,
+      `
+        select
+          le.id,
+          le.case_number,
+          le.activity_date::text,
+          le.case_type,
+          le.anaesthesia_unit,
+          le.ot_number,
+          le.clinical_domain,
+          le.procedure_category,
+          le.procedure_name,
+          le.specialty_area,
+          le.location,
+          le.urgency,
+          le.patient_age_band,
+          le.asa_physical_status,
+          le.anaesthesia_technique,
+          le.supervision_level,
+          le.participation_level,
+          le.complexity_level,
+          le.surgical_department,
+          le.surgery_start_time::text,
+          le.surgery_end_time::text,
+          le.duration_minutes,
+          le.age_years,
+          le.gender,
+          le.bmi::text,
+          le.anaesthetic_planned,
+          le.airway_management,
+          le.scopy_technique,
+          le.intraoperative_events,
+          le.had_complication,
+          le.complication_summary,
+          le.reflection_notes,
+          le.created_at::text,
+          u.id as user_id,
+          coalesce(u.display_name, u.name) as user_name,
+          r.key as role_key,
+          u.designation
+        from logbook_entries le
+        inner join users u on u.id = le.user_id
+        inner join roles r on r.id = u.role_id
+        where le.unit_id = $1
+          and le.activity_date between $2::date and $3::date
+          and ($4 = '' or le.case_type = $4)
+          and ($5 = '' or le.surgical_department = $5)
+          and ($6::boolean = false or le.had_complication is true)
+          and (
+            le.user_id = $7
+            or coalesce(le.intraoperative_events, '') ilike any($8::text[])
+            or coalesce(le.complication_summary, '') ilike any($8::text[])
+            or coalesce(le.reflection_notes, '') ilike any($8::text[])
+            or exists (
+              select 1
+              from logbook_entry_learning_points lep
+              where lep.logbook_entry_id = le.id
+                and lep.point_text ilike any($8::text[])
+            )
+          )
+          and (
+            $9 = ''
+            or le.procedure_name ilike '%' || $9 || '%'
+            or le.surgical_department ilike '%' || $9 || '%'
+            or le.ot_number ilike '%' || $9 || '%'
+            or le.anaesthetic_planned ilike '%' || $9 || '%'
+            or le.supervision_level ilike '%' || $9 || '%'
+            or le.complication_summary ilike '%' || $9 || '%'
+            or le.case_number::text ilike '%' || $9 || '%'
+            or coalesce(u.display_name, u.name) ilike '%' || $9 || '%'
+          )
+        order by le.activity_date desc, le.created_at desc
+        limit $10
+      `,
+      [
+        user.unitId,
+        filters.periodStart,
+        filters.periodEnd,
+        filters.caseType,
+        filters.surgicalDepartment,
+        filters.flaggedOnly,
+        user.id,
+        involvementPatterns,
+        filters.searchText,
+        filters.limit ?? 80
+      ]
     );
 
-    return hydratedEntries.map((entry) => {
-      const metadata = metadataById.get(entry.id);
-      return {
-        ...entry,
-        userId: metadata?.userId ?? "",
-        userName: metadata?.userName ?? "Unknown user",
-        roleKey: metadata?.roleKey ?? "",
-        designation: metadata?.designation ?? ""
-      };
-    });
+    return this.hydrateUnitRows(result.rows);
+  }
+
+  async isEntryInvolvingUser(user: AuthenticatedUser, entryId: string): Promise<boolean> {
+    const involvementPatterns = this.buildInvolvementPatterns(user);
+    const result = await query<{ exists: boolean }>(
+      this.env,
+      `
+        select exists (
+          select 1
+          from logbook_entries le
+          where le.unit_id = $1
+            and le.id = $2
+            and (
+              le.user_id = $3
+              or coalesce(le.intraoperative_events, '') ilike any($4::text[])
+              or coalesce(le.complication_summary, '') ilike any($4::text[])
+              or coalesce(le.reflection_notes, '') ilike any($4::text[])
+              or exists (
+                select 1
+                from logbook_entry_learning_points lep
+                where lep.logbook_entry_id = le.id
+                  and lep.point_text ilike any($4::text[])
+              )
+            )
+        ) as exists
+      `,
+      [user.unitId, entryId, user.id, involvementPatterns]
+    );
+
+    return result.rows[0]?.exists ?? false;
   }
 
   async getByIdForUnit(unitId: string, entryId: string): Promise<UnitBrowseEntryRecord | null> {
@@ -747,6 +850,40 @@ export class LogbookRepository {
     }
 
     return entries;
+  }
+
+  private async hydrateUnitRows(rows: UnitBrowseRow[]): Promise<UnitBrowseEntryRecord[]> {
+    const hydratedEntries = await this.hydrateEntries(rows);
+    const metadataById = new Map(
+      rows.map((row) => [
+        row.id,
+        {
+          userId: row.user_id,
+          userName: row.user_name,
+          roleKey: row.role_key,
+          designation: row.designation ?? ""
+        }
+      ])
+    );
+
+    return hydratedEntries.map((entry) => {
+      const metadata = metadataById.get(entry.id);
+      return {
+        ...entry,
+        userId: metadata?.userId ?? "",
+        userName: metadata?.userName ?? "Unknown user",
+        roleKey: metadata?.roleKey ?? "",
+        designation: metadata?.designation ?? ""
+      };
+    });
+  }
+
+  private buildInvolvementPatterns(user: AuthenticatedUser): string[] {
+    const identifiers = [user.displayName, user.name, user.username]
+      .map((value) => String(value ?? "").trim())
+      .filter((value) => value.length >= 3);
+
+    return Array.from(new Set(identifiers)).map((value) => `%${value}%`);
   }
 
   private async insertRepeatableChildren(

@@ -36,6 +36,7 @@ Institutional systems should not treat user management as only login plus role a
 - Do not create too many permission roles too early
 - Use descriptive responsibility labels in profile metadata before expanding the permission matrix
 - Record who performed approval, suspension, archival, and profile-governance actions
+- Keep `faculty` separate from `unit_admin_or_faculty` when confidentiality boundaries matter. Unit chief/admin roles can govern people and unit-wide analytics; faculty should only receive scoped operational permissions unless deliberately promoted.
 
 ## Project Application
 
@@ -58,3 +59,8 @@ Institutional systems should not treat user management as only login plus role a
   - admin-governed password set flow
   - audit logging for credential changes
   - login throttling after repeated failed sign-in attempts
+- Faculty separation implementation applies:
+  - role key `faculty`
+  - no admin management permission
+  - no unit-wide logbook review permission
+  - scoped `logbook:involved-view` permission for own/name-mentioned cases

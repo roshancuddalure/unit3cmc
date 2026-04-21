@@ -19,6 +19,9 @@ Even before full account lockout policies or recovery flows exist, an internal s
 - Show a clear cooldown message when the limit is exceeded
 - Mention the existence of cooldown protection on the login page
 - Keep the message generic and do not reveal whether an identity is valid
+- Return expected sign-in blockers to `/auth/login` with a visible flash message
+- Use `401` for invalid credentials, `403` for pending/suspended/archived accounts, and `429` for cooldown
+- Send only unexpected failures to the global error handler
 
 ## Project Application
 
