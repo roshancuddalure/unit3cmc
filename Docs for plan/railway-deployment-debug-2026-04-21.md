@@ -27,6 +27,18 @@ Fix:
 - value must be a long random string and at least 12 characters
 - redeploy/restart the Railway service after saving variables
 
+## Repeated log note
+
+If a later deploy log still shows `SESSION_SECRET` as `received undefined`, the app has not received the variable at runtime.
+
+This usually means:
+
+- the variable was added to the Postgres service instead of the web app service
+- the variable name was misspelled
+- the variable was added in a different Railway environment than the one being deployed
+- the service was not redeployed after saving variables
+- the deployed service is not the GitHub-backed web service expected
+
 ## Most likely causes for this app
 
 The local `.env` file is intentionally ignored by Git, so Railway will not receive local secrets automatically.
