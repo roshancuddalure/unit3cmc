@@ -63,15 +63,16 @@ export function buildAuthRouter(authService: AuthService, loginThrottleService: 
 
   router.post("/register", async (req, res, next) => {
     try {
+      const designation = String(req.body.designation ?? "");
       await authService.register({
         username: String(req.body.username ?? ""),
         name: String(req.body.name ?? ""),
         email: String(req.body.email ?? ""),
         password: String(req.body.password ?? ""),
         phone: String(req.body.phone ?? ""),
-        designation: String(req.body.designation ?? ""),
+        designation,
         department: String(req.body.department ?? ""),
-        trainingYear: String(req.body.trainingYear ?? ""),
+        trainingYear: designation === "Postgraduate" ? String(req.body.trainingYear ?? "") : "",
         employeeOrStudentId: String(req.body.employeeOrStudentId ?? "")
       });
       setFlash(req, "success", "Registration submitted. Your account will be available after Unit 3 administration approves it.");

@@ -31,6 +31,12 @@ Once account lifecycle exists, the next step is separating login identity from r
 - Surface `My Profile` as a first-class operator-rail destination
 - Keep role and account status visible but not self-editable
 - Allow profile maintenance without mixing it into login or admin workflows
+- Structure professional identity fields wherever possible instead of relying on free text
+- Use a designation dropdown during registration
+- Show `training_year` only when designation is `Postgraduate`
+- Use postgraduate year dropdown values such as `PGY1`, `PGY2`, and `PGY3`
+- Clear or ignore `training_year` for non-postgraduate users on the backend
+- Group registration into identity, professional details, and security sections to reduce onboarding congestion
 
 ## Project Application
 

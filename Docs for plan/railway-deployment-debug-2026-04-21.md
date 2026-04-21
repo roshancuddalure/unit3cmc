@@ -39,6 +39,8 @@ This usually means:
 - the service was not redeployed after saving variables
 - the deployed service is not the GitHub-backed web service expected
 
+Observed raw variables later contained `SESSION_SECRET`, so if logs still show it undefined, verify the variables were added to the currently deployed web service and production environment, then trigger a fresh redeploy. Also ensure `APP_BASE_URL` includes the scheme, for example `https://unit3cmc-production.up.railway.app`, not only the hostname.
+
 ## Most likely causes for this app
 
 The local `.env` file is intentionally ignored by Git, so Railway will not receive local secrets automatically.
@@ -85,6 +87,27 @@ If `NODE_ENV=production`, document uploads use S3 storage. Missing S3 credential
 5. Run migrations against the Railway database.
 6. Run seed once to create Unit 3 and the bootstrap admin user.
 7. Restart the web service.
+
+## Bootstrap admin login note
+
+The `unitchief` account is created by `npm run db:seed`; it is not created just by starting the web server.
+
+The seed reads:
+
+- `BOOTSTRAP_ADMIN_USERNAME`
+- `BOOTSTRAP_ADMIN_PASSWORD`
+- `BOOTSTRAP_ADMIN_EMAIL`
+- `BOOTSTRAP_ADMIN_NAME`
+
+If the unit chief credential does not work on Railway:
+
+- confirm the web service has `DATABASE_URL`
+- remove blank `DATABASE_ADMIN_URL`
+- run `npm run db:migrate`
+- run `npm run db:seed`
+- then sign in with `BOOTSTRAP_ADMIN_USERNAME` and `BOOTSTRAP_ADMIN_PASSWORD`
+
+The seed is idempotent. Running it again updates the existing bootstrap admin password and keeps the user active.
 
 ## Useful commands
 

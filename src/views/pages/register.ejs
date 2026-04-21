@@ -1,61 +1,92 @@
 <%- include("../partials/header", { title, currentUser, flash }) %>
-<section class="grid-two">
-  <section class="panel auth-card">
+<section class="grid-two auth-register-shell">
+  <section class="panel auth-card auth-register-card">
     <p class="eyebrow">Registration</p>
     <h1>Create your Unit 3 account</h1>
     <p class="section-copy">
       New users are registered first in a pending state so access can be reviewed safely by unit leadership before the internal workspace opens.
     </p>
-    <form action="/auth/register" method="post" class="stack-form">
-      <div class="inline-form">
+    <form action="/auth/register" method="post" class="stack-form auth-register-form">
+      <div class="auth-form-section">
+        <p class="section-kicker">Identity</p>
+        <div class="inline-form auth-register-row">
+          <label>
+            <span>Full name</span>
+            <input type="text" name="name" required autocomplete="name" />
+          </label>
+          <label>
+            <span>Username</span>
+            <input type="text" name="username" required autocomplete="username" />
+          </label>
+        </div>
+        <div class="inline-form auth-register-row">
+          <label>
+            <span>Email</span>
+            <input type="email" name="email" required autocomplete="email" />
+          </label>
+          <label>
+            <span>Phone</span>
+            <input type="tel" name="phone" autocomplete="tel" />
+          </label>
+        </div>
+      </div>
+
+      <div class="auth-form-section">
+        <p class="section-kicker">Professional details</p>
+        <div class="inline-form auth-register-row">
+          <label>
+            <span>Designation</span>
+            <select name="designation" data-designation-select required>
+              <option value="">Choose designation</option>
+              <option value="Postgraduate">Postgraduate</option>
+              <option value="Senior Resident">Senior Resident</option>
+              <option value="Consultant">Consultant</option>
+              <option value="Faculty">Faculty</option>
+              <option value="Fellow">Fellow</option>
+              <option value="Observer">Observer</option>
+            </select>
+          </label>
+          <label>
+            <span>Department</span>
+            <select name="department" required>
+              <option value="Anaesthesia" selected>Anaesthesia</option>
+              <option value="Critical Care">Critical Care</option>
+              <option value="Pain Medicine">Pain Medicine</option>
+              <option value="Emergency Medicine">Emergency Medicine</option>
+              <option value="Other">Other</option>
+            </select>
+          </label>
+        </div>
+        <div class="inline-form auth-register-row auth-register-training-row">
+          <label data-training-year-field hidden>
+            <span>Year of PG training</span>
+            <select name="trainingYear" data-training-year-select disabled>
+              <option value="">Choose PG year</option>
+              <option value="PGY1">PGY1</option>
+              <option value="PGY2">PGY2</option>
+              <option value="PGY3">PGY3</option>
+            </select>
+          </label>
+          <label>
+            <span>Employee / Student ID</span>
+            <input type="text" name="employeeOrStudentId" autocomplete="off" />
+          </label>
+        </div>
+      </div>
+
+      <div class="auth-form-section">
+        <p class="section-kicker">Security</p>
         <label>
-          <span>Full name</span>
-          <input type="text" name="name" required />
-        </label>
-        <label>
-          <span>Username</span>
-          <input type="text" name="username" required />
+          <span>Password</span>
+          <input type="password" name="password" minlength="8" required autocomplete="new-password" />
         </label>
       </div>
-      <div class="inline-form">
-        <label>
-          <span>Email</span>
-          <input type="email" name="email" required />
-        </label>
-        <label>
-          <span>Phone</span>
-          <input type="text" name="phone" />
-        </label>
-      </div>
-      <div class="inline-form">
-        <label>
-          <span>Designation</span>
-          <input type="text" name="designation" placeholder="Postgraduate, Consultant, Faculty" />
-        </label>
-        <label>
-          <span>Department</span>
-          <input type="text" name="department" value="Anaesthesia" />
-        </label>
-      </div>
-      <div class="inline-form">
-        <label>
-          <span>Training year</span>
-          <input type="text" name="trainingYear" placeholder="PGY1, PGY2, Senior resident" />
-        </label>
-        <label>
-          <span>Employee / Student ID</span>
-          <input type="text" name="employeeOrStudentId" />
-        </label>
-      </div>
-      <label>
-        <span>Password</span>
-        <input type="password" name="password" minlength="8" required />
-      </label>
+
       <button type="submit">Register</button>
     </form>
     <p class="helper-text">Already have an account? <a href="/auth/login">Sign in</a></p>
   </section>
-  <aside class="panel">
+  <aside class="panel auth-next-card">
     <p class="section-kicker">What happens next</p>
     <h2>Designed for safe onboarding</h2>
     <ul class="clean-list">

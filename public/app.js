@@ -220,6 +220,26 @@ SAFETY ALERTS:
     }, 3800);
   }
 
+  const designationSelect = document.querySelector("[data-designation-select]");
+  const trainingYearField = document.querySelector("[data-training-year-field]");
+  const trainingYearSelect = document.querySelector("[data-training-year-select]");
+
+  if (designationSelect instanceof HTMLSelectElement && trainingYearField && trainingYearSelect instanceof HTMLSelectElement) {
+    const syncTrainingYearVisibility = () => {
+      const shouldShowTrainingYear = designationSelect.value === "Postgraduate";
+      trainingYearField.hidden = !shouldShowTrainingYear;
+      trainingYearSelect.disabled = !shouldShowTrainingYear;
+      trainingYearSelect.required = shouldShowTrainingYear;
+
+      if (!shouldShowTrainingYear) {
+        trainingYearSelect.value = "";
+      }
+    };
+
+    designationSelect.addEventListener("change", syncTrainingYearVisibility);
+    syncTrainingYearVisibility();
+  }
+
   const logbookTabsRoot = document.querySelector("[data-logbook-tabs]");
   if (logbookTabsRoot) {
     const tabButtons = Array.from(logbookTabsRoot.querySelectorAll("[data-logbook-tab]"));

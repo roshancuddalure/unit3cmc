@@ -114,6 +114,18 @@ Detailed implementation log:
 - `skills/learning-academy-pattern.md`
 - `skills/project-learning-rule.md`
 
+## 2026-04-21 Registration Onboarding UX Upgrade
+
+The public registration form should be calm, structured, and safe for later admin review.
+
+Current direction:
+
+- split registration into identity, professional details, and security sections
+- use controlled dropdowns for designation and postgraduate training year
+- show postgraduate year only for users who identify as postgraduate
+- keep backend guards so non-postgraduate users do not store a training year
+- use professional identity patterns from `skills/profile-module-pattern.md`
+
 ## Assumptions And Defaults
 - Use `npm` as the package manager.
 - Use `tsx` for local dev, `tsc` for production build, Vitest + Supertest for backend tests, and a small Playwright smoke suite for critical UI flows.
