@@ -20,6 +20,17 @@ Modular TypeScript + Express foundation for Unit 3 of Anaesthesia, Christian Med
 4. Seed the initial Unit 3/admin data with `npm run db:seed`.
 5. Start local development with `npm run dev`.
 
+## Railway Deployment Notes
+
+- Do not commit `.env`; add production variables in Railway.
+- Add a Railway Postgres service and expose its `DATABASE_URL` to the web service.
+- Set a long `SESSION_SECRET`; the app will not boot without it.
+- Set `APP_BASE_URL` to the Railway public domain.
+- Use `npm run build` as the build command and `npm start` as the start command.
+- Run `npm run db:migrate` and `npm run db:seed` once against the Railway database before using the app.
+
+More detail is logged in `Docs for plan/railway-deployment-debug-2026-04-21.md`.
+
 ## Architecture
 
 - `src/modules/*`: feature modules with routes, services, and repositories
